@@ -7,7 +7,7 @@
   const PENDIENTE = "dc_portal_codigo_pendiente";
   const pesos = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
-  const sb = window.supabase.createClient(cfg.url, cfg.clavePublica, { auth: { persistSession: true, autoRefreshToken: true } });
+  const sb = window.supabase.createClient(cfg.url, cfg.clavePublica, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "dc-portal-cliente-sesion" } });
   let datos = null;
   let cargadoEn = 0;
   let vista = "proceso";
