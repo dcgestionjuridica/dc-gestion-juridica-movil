@@ -1,0 +1,245 @@
+// DC Gestión Jurídica · web para el celular (solo consulta).
+// Lee de Supabase con la sesión de cada persona; las reglas de cada rol las aplica Supabase.
+(function () {
+  const L = window.DC_LOGICA;
+  const cfg = window.DC_CONFIG;
+  const $ = id => document.getElementById(id);
+  const PORTAL = "https://consultaprocesos.ramajudicial.gov.co/Procesos/NumeroRadicacion";
+
+  const sb = window.supabase.createClient(cfg.url, cfg.clavePublica, { auth: { persistSession: true, autoRefreshToken: true } });
+  let datos = null;
+  let cargadoEn = 0;
+  let vista = "inicio";
+  let pestana = "vencimientos";
+
+  function esc(t) {
+    return String(t === null || t === undefined ? "" : t)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function nombreCliente(id) {
+    const c = datos.clientesPorId[id];
+    return c ? (c.nombres + " " + c.apellidos).trim() : "";
+  }
+  function numeroExpediente(id) {
+    const e = datos.expedientesPorId[id];
+    return e ? e.numero : "";
+  }
+  function item(color, titulo, sub) {
+    return '<div class="it"><div class="pto ' + color + '"></div><div class="crece">' + esc(titulo) +
+      (sub ? "<small>" + sub + "</small>" : "") + "</div></div>";
+  }
+  function tarjeta(titulo, derecha, contenido, clase) {
+    return '<div class="tarj ' + (clase || "") + '"><h3>' + titulo + (derecha ? " <span>" + derecha + "</span>" : "") + "</h3>" + contenido + "</div>";
+  }
+  function vacio(texto) { return '<div class="vacio">' + esc(texto) + "</div>"; }
+
+  // ---------- Entrada y salida ----------
+  function mostrarEntrada(mensaje) {
+    $("app").classList.add("oculto");
+    $("entrada").classList.remove("oculto");
+    $("error-entrada").textContent = mensaje || "";
+  }
+  function mostrarApp() {
+    $("entrada").classList.add("oculto");
+    $("app").classList.remove("oculto");
+  }
+  $("form-entrada").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    $("btn-entrar").disabled = true;
+    $("error-entrada").textContent = "";
+    const { error } = await sb.auth.signInWithPassword({ email: $("correo").value.trim(), password: $("clave").value });
+    $("btn-entrar").disabled = false;
+    if (error) {
+      $("error-entrada").textContent = /invalid/i.test(error.message) ? "Correo o contraseña incorrectos." : "No fue posible entrar: " + error.message;
+      return;
+    }
+    $("clave").value = "";
+    await iniciar();
+  });
+  $("btn-salir").addEventListener("click", async () => {
+    await sb.auth.signOut();
+    datos = null;
+    mostrarEntrada("");
+  });
+  $("btn-actualizar").addEventListener("click", () => cargar());
+
+  // ---------- Datos ----------
+  async function leer(consulta) {
+    const { data, error } = await consulta;
+    if (error) throw error;
+    return data || [];
+  }
+  async function cargar() {
+    $("cuerpo").innerHTML = '<div class="cargando">Cargando…</div>';
+    try {
+      const { data: s } = await sb.auth.getSession();
+      if (!s.session) { mostrarEntrada(""); return; }
+      const uid = s.session.user.id;
+      const [perfiles, clientes, expedientes, vencimientos, terminos, eventos, tareas, agenda, vigilancia] = await Promise.all([
+        leer(sb.from("perfiles").select("nombre,rol,activo").eq("id", uid)),
+        leer(sb.from("clientes").select("id,nombres,apellidos,archivado")),
+        leer(sb.from("expedientes").select("id,cliente_id,numero,estado,fecha_apertura,archivado_en")),
+        leer(sb.from("vencimientos_juridicos").select("id,termino_id,expediente_id,cliente_id,titulo,fecha_vencimiento,estado,responsable")),
+        leer(sb.from("terminos_juridicos").select("id,evento_id,fecha_inicio,fecha_vencimiento,cantidad,unidad")),
+        leer(sb.from("eventos_juridicos").select("id,expediente_id,fecha_evento,tipo_evento")),
+        leer(sb.from("tareas_juridicas").select("id,vencimiento_id,titulo,responsable,fecha_limite,estado")),
+        leer(sb.from("eventos_agenda").select("id,titulo,descripcion,fecha,hora,tipo")),
+        sb.rpc("vigilancia_listar_transaccional", { datos: {} }).then(r => (r.error ? [] : (r.data && r.data.procesos) || []))
+      ]);
+      const perfil = perfiles[0];
+      if (!perfil || perfil.activo === false) {
+        await sb.auth.signOut();
+        mostrarEntrada("Su cuenta no está activa. Pídale al administrador que la active.");
+        return;
+      }
+      datos = { perfil, clientes, expedientes, vencimientos, terminos, eventos, tareas, agenda, vigilancia, clientesPorId: {}, expedientesPorId: {} };
+      clientes.forEach(c => (datos.clientesPorId[c.id] = c));
+      expedientes.forEach(e => (datos.expedientesPorId[e.id] = e));
+      cargadoEn = Date.now();
+      mostrarApp();
+      pintar();
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      if (/JWT|session|token/i.test(msg)) { mostrarEntrada("La sesión venció. Entre de nuevo."); return; }
+      mostrarApp();
+      $("cuerpo").innerHTML = '<div class="tarj">' + vacio("No fue posible leer los datos. Revise el internet y pulse ⟳ arriba.") +
+        '<div class="vacio">' + esc(msg) + "</div></div>";
+    }
+  }
+
+  // ---------- Pantallas ----------
+  function pintar() {
+    if (!datos) return;
+    document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.vista === vista));
+    const hoy = new Date();
+    const nombre = (datos.perfil.nombre || "").split(" ")[0];
+    const encabezados = {
+      inicio: [L.saludo(hoy) + (nombre ? ", " + nombre : ""), L.fechaLarga(hoy)],
+      pendientes: ["Pendientes", "Lo mismo que en el programa del PC"],
+      agenda: ["Agenda", "Próximos 30 días"],
+      procesos: ["Procesos", "Radicados vigilados en la Rama Judicial"]
+    };
+    $("titulo").textContent = encabezados[vista][0];
+    $("subtitulo").textContent = encabezados[vista][1];
+    const html = { inicio: vistaInicio, pendientes: vistaPendientes, agenda: vistaAgenda, procesos: vistaProcesos }[vista]();
+    $("cuerpo").innerHTML = html;
+    $("cuerpo").scrollTop = 0;
+  }
+
+  function lineaVencimiento(v) {
+    const cli = nombreCliente(v.cliente_id);
+    return item(L.colorPunto(v.dias), v.titulo, esc(cli || numeroExpediente(v.expediente_id)) + " · " + esc(v.dias !== null && v.dias <= 6 ? L.cuando(v.dias) : L.fechaCorta(v.fecha_vencimiento)));
+  }
+
+  function vistaInicio() {
+    const g = L.agruparVencimientos(datos.vencimientos);
+    const movidos = datos.vigilancia.filter(p => p.pendiente);
+    const citasHoy = L.agenda(datos.agenda, datos.vencimientos, datos.tareas, undefined, 0).length;
+    let h = '<div class="res"><div><b>' + g.semana.length + "</b><span>Vencen esta semana</span></div><div><b>" + movidos.length +
+      "</b><span>Procesos con movimiento</span></div><div><b>" + citasHoy + "</b><span>Citas hoy</span></div></div>";
+    const mov = movidos.length
+      ? movidos.map(p => item("a", (p.cliente || "Sin cliente") + " · " + p.expediente_numero,
+          esc(String(p.ultima_actuacion || "").split(" · ")[0]) + (p.ultima_fecha_actuacion ? " · " + esc(L.fechaCorta(p.ultima_fecha_actuacion)) : ""))).join("")
+      : vacio("Sin actuaciones nuevas.");
+    h += tarjeta("⚖️ Movimiento en Rama Judicial", movidos.length ? "hoy" : "", mov, "mov");
+    const proximos = g.vencidos.concat(g.semana, g.despues).slice(0, 3);
+    h += '<div class="tarj"><h3>⏰ Próximos vencimientos <a href="#" data-ir="pendientes">ver todos</a></h3>' +
+      (proximos.length ? proximos.map(lineaVencimiento).join("") : vacio("No hay vencimientos pendientes.")) + "</div>";
+    return h;
+  }
+
+  function vistaPendientes() {
+    const chips = [["vencimientos", "Vencimientos"], ["terminos", "Términos"], ["alertas", "Alertas"], ["tareas", "Tareas"]]
+      .map(([k, t]) => '<button data-pestana="' + k + '" class="' + (k === pestana ? "on" : "") + '">' + t + "</button>").join("");
+    let h = '<div class="chips">' + chips + "</div>";
+    if (pestana === "vencimientos") {
+      const g = L.agruparVencimientos(datos.vencimientos);
+      if (!g.vencidos.length && !g.semana.length && !g.despues.length) return h + tarjeta("Vencimientos", "", vacio("No hay vencimientos pendientes."));
+      if (g.vencidos.length) h += tarjeta("Vencidos", g.vencidos.length, g.vencidos.map(lineaVencimiento).join(""));
+      if (g.semana.length) h += tarjeta("Esta semana", g.semana.length, g.semana.map(lineaVencimiento).join(""));
+      if (g.despues.length) h += tarjeta("Más adelante", g.despues.length, g.despues.map(lineaVencimiento).join(""));
+    } else if (pestana === "terminos") {
+      const vencPorTermino = {};
+      datos.vencimientos.forEach(v => (vencPorTermino[v.termino_id] = v));
+      const lista = datos.terminos
+        .map(t => ({ t, v: vencPorTermino[t.id], dias: L.diasHasta(t.fecha_vencimiento) }))
+        .filter(x => x.v && L.estaPendiente(x.v.estado))
+        .sort((a, b) => (a.dias === null ? 1e9 : a.dias) - (b.dias === null ? 1e9 : b.dias));
+      h += tarjeta("Términos en curso", lista.length, lista.length ? lista.map(x => item(L.colorPunto(x.dias), x.v.titulo,
+        esc(nombreCliente(x.v.cliente_id)) + " · " + esc(x.t.cantidad + " " + String(x.t.unidad || "").replace(/_/g, " ").toLowerCase()) +
+        " · desde " + esc(L.fechaCorta(x.t.fecha_inicio)) + " · vence " + esc(L.fechaCorta(x.t.fecha_vencimiento)))).join("") : vacio("No hay términos en curso."));
+    } else if (pestana === "alertas") {
+      const al = L.alertas(datos.vencimientos, datos.expedientes, datos.eventos);
+      const grupos = {};
+      al.forEach(a => (grupos[a.tipo] = grupos[a.tipo] || []).push(a));
+      const tipos = Object.keys(grupos);
+      if (!tipos.length) return h + tarjeta("Alertas de riesgo", "", vacio("Sin alertas. Todo al día."));
+      tipos.forEach(tipo => {
+        h += tarjeta(esc(tipo), grupos[tipo].length, grupos[tipo].map(a => a.expediente
+          ? item(a.color, a.titulo, esc(nombreCliente(a.expediente.cliente_id)) + " · " + (a.sinActuacion === null ? "sin actuaciones registradas" : "última actuación hace " + a.sinActuacion + " días"))
+          : item(a.color, a.titulo, esc(nombreCliente(a.detalle.cliente_id)) + " · " + esc(L.cuando(a.dias)))).join(""));
+      });
+    } else {
+      const lista = datos.tareas.filter(t => L.estaPendiente(t.estado))
+        .map(t => Object.assign({}, t, { dias: L.diasHasta(t.fecha_limite) }))
+        .sort((a, b) => (a.dias === null ? 1e9 : a.dias) - (b.dias === null ? 1e9 : b.dias));
+      h += tarjeta("Tareas pendientes", lista.length, lista.length ? lista.map(t => item(L.colorPunto(t.dias), t.titulo,
+        esc(t.responsable || "Sin responsable") + " · " + esc(L.fechaCorta(t.fecha_limite)))).join("") : vacio("No hay tareas pendientes."));
+    }
+    return h;
+  }
+
+  function vistaAgenda() {
+    const items = L.agenda(datos.agenda, datos.vencimientos, datos.tareas);
+    if (!items.length) return tarjeta("Agenda", "", vacio("Nada en los próximos 30 días."));
+    const porDia = {};
+    items.forEach(i => (porDia[i.dias] = porDia[i.dias] || []).push(i));
+    return Object.keys(porDia).map(Number).sort((a, b) => a - b).map(d => {
+      const f = L.hoyLocal(); f.setDate(f.getDate() + d);
+      const titulo = d === 0 ? "Hoy" : d === 1 ? "Mañana" : L.fechaLarga(f);
+      return tarjeta(esc(titulo), porDia[d].length, porDia[d].map(i => item(
+        i.tipo === "Vencimiento" ? L.colorPunto(d) : i.tipo === "Tarea" ? "v" : "z",
+        (i.hora ? i.hora + " · " : "") + i.titulo,
+        esc(i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1).toLowerCase()) + (i.ref ? " · " + esc(nombreCliente(i.ref.cliente_id)) : i.sub ? " · " + esc(i.sub) : ""))).join(""));
+    }).join("");
+  }
+
+  function vistaProcesos() {
+    const lista = datos.vigilancia;
+    if (!lista.length) return tarjeta("Procesos vigilados", "", vacio("Todavía no hay radicados en vigilancia. Se agregan en el programa del PC, en la ficha del expediente."));
+    return tarjeta("Procesos vigilados", lista.length, lista.map(p => {
+      const sub = "Radicado " + esc(p.radicado) + "<br>" +
+        (p.ultima_fecha_actuacion ? "Última actuación: " + esc(L.fechaCorta(p.ultima_fecha_actuacion)) + (p.ultima_actuacion ? " · " + esc(String(p.ultima_actuacion).slice(0, 220)) : "") : "Aún sin revisar.") +
+        '<br><a class="enlace" href="' + PORTAL + '" target="_blank" rel="noopener" data-radicado="' + esc(p.radicado) + '">Ver en el portal (copia el radicado)</a>';
+      return item(p.pendiente ? "a" : "z", (p.pendiente ? "● Movimiento nuevo · " : "") + (p.cliente || "Sin cliente") + " · " + p.expediente_numero, sub);
+    }).join(""));
+  }
+
+  // ---------- Navegación ----------
+  document.querySelector(".nav").addEventListener("click", ev => {
+    const b = ev.target.closest("button[data-vista]");
+    if (!b) return;
+    vista = b.dataset.vista;
+    pintar();
+  });
+  $("cuerpo").addEventListener("click", ev => {
+    const ir = ev.target.closest("[data-ir]");
+    if (ir) { ev.preventDefault(); vista = ir.dataset.ir; pestana = "vencimientos"; pintar(); return; }
+    const p = ev.target.closest("[data-pestana]");
+    if (p) { pestana = p.dataset.pestana; pintar(); return; }
+    const r = ev.target.closest("[data-radicado]");
+    if (r && navigator.clipboard) navigator.clipboard.writeText(r.dataset.radicado).catch(() => {});
+  });
+  // Al volver a la app después de un rato, se actualiza sola.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && datos && Date.now() - cargadoEn > 120000) cargar();
+  });
+
+  async function iniciar() {
+    const { data } = await sb.auth.getSession();
+    if (data.session) await cargar(); else mostrarEntrada("");
+  }
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  iniciar();
+})();
