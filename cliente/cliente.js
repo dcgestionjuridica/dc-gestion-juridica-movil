@@ -1,0 +1,217 @@
+// DC Gestión Jurídica · portal de clientes (solo consulta).
+// El cliente ve únicamente lo que devuelve portal_mi_resumen_transaccional: su proceso y su cartera.
+(function () {
+  const L = window.DC_LOGICA;
+  const cfg = window.DC_CONFIG;
+  const $ = id => document.getElementById(id);
+  const PENDIENTE = "dc_portal_codigo_pendiente";
+  const pesos = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+
+  const sb = window.supabase.createClient(cfg.url, cfg.clavePublica, { auth: { persistSession: true, autoRefreshToken: true } });
+  let datos = null;
+  let cargadoEn = 0;
+  let vista = "proceso";
+  let modoCrear = false;
+
+  function esc(t) {
+    return String(t === null || t === undefined ? "" : t)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function item(color, titulo, sub) {
+    return '<div class="it"><div class="pto ' + color + '"></div><div class="crece">' + titulo + (sub ? "<small>" + sub + "</small>" : "") + "</div></div>";
+  }
+  function tarjeta(titulo, derecha, contenido, clase) {
+    return '<div class="tarj ' + (clase || "") + '"><h3>' + titulo + (derecha !== "" && derecha !== undefined ? " <span>" + derecha + "</span>" : "") + "</h3>" + contenido + "</div>";
+  }
+  function vacio(t) { return '<div class="vacio">' + esc(t) + "</div>"; }
+  function num(v) { const n = Number(v); return isFinite(n) ? n : 0; }
+  function guardarCodigo(c) { try { c ? localStorage.setItem(PENDIENTE, c) : localStorage.removeItem(PENDIENTE); } catch (e) {} }
+  function codigoGuardado() { try { return localStorage.getItem(PENDIENTE) || ""; } catch (e) { return ""; } }
+
+  function mostrar(id) {
+    ["entrada", "vincular", "app"].forEach(s => $(s).classList.toggle("oculto", s !== id));
+  }
+
+  // ---------- Entrar / crear cuenta ----------
+  function modo(crear) {
+    modoCrear = crear;
+    $("tab-entrar").classList.toggle("on", !crear);
+    $("tab-crear").classList.toggle("on", crear);
+    $("clave2").classList.toggle("oculto", !crear);
+    $("codigo").classList.toggle("oculto", !crear);
+    $("clave2").required = crear;
+    $("codigo").required = crear;
+    $("clave").autocomplete = crear ? "new-password" : "current-password";
+    $("btn-entrar").textContent = crear ? "Crear mi cuenta" : "Entrar";
+    $("error-entrada").textContent = "";
+    $("ok-entrada").textContent = "";
+  }
+  $("tab-entrar").addEventListener("click", () => modo(false));
+  $("tab-crear").addEventListener("click", () => modo(true));
+
+  $("form-entrada").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    $("error-entrada").textContent = "";
+    $("ok-entrada").textContent = "";
+    const correo = $("correo").value.trim();
+    const clave = $("clave").value;
+    if (clave.length < 8) { $("error-entrada").textContent = "La contraseña debe tener al menos 8 caracteres."; return; }
+    $("btn-entrar").disabled = true;
+    try {
+      if (modoCrear) {
+        if (clave !== $("clave2").value) { $("error-entrada").textContent = "Las dos contraseñas no son iguales."; return; }
+        const codigo = $("codigo").value.trim();
+        if (codigo.replace(/[^A-Za-z0-9]/g, "").length < 8) { $("error-entrada").textContent = "Escriba el código completo que le envió el despacho."; return; }
+        guardarCodigo(codigo);
+        const { data, error } = await sb.auth.signUp({ email: correo, password: clave, options: { emailRedirectTo: location.href.split("#")[0] } });
+        if (error) { $("error-entrada").textContent = traducir(error.message); return; }
+        if (!data.session) {
+          modo(false);
+          $("correo").value = correo;
+          $("ok-entrada").textContent = "Listo. Le enviamos un correo a " + correo + ": ábralo y pulse el enlace para confirmar. Después vuelva aquí y pulse «Entrar».";
+          return;
+        }
+        $("clave").value = ""; $("clave2").value = "";
+        await iniciar();
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email: correo, password: clave });
+        if (error) { $("error-entrada").textContent = traducir(error.message); return; }
+        $("clave").value = "";
+        await iniciar();
+      }
+    } finally {
+      $("btn-entrar").disabled = false;
+    }
+  });
+
+  function traducir(m) {
+    if (/invalid login/i.test(m)) return "Correo o contraseña incorrectos.";
+    if (/not confirmed/i.test(m)) return "Primero confirme su correo: abra el mensaje que le enviamos y pulse el enlace.";
+    if (/already registered/i.test(m)) return "Ese correo ya tiene cuenta. Use «Entrar».";
+    if (/rate limit/i.test(m)) return "Se enviaron demasiados correos. Intente de nuevo en una hora.";
+    return "No fue posible: " + m;
+  }
+
+  $("form-vincular").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    $("btn-vincular").disabled = true;
+    const r = await reclamar($("codigo2").value.trim());
+    $("btn-vincular").disabled = false;
+    if (r === true) { $("codigo2").value = ""; await cargar(); } else $("error-vincular").textContent = r;
+  });
+  async function reclamar(codigo) {
+    const { data, error } = await sb.rpc("portal_reclamar_transaccional", { datos: { codigo } });
+    if (error) { guardarCodigo(""); return error.message; }
+    if (!data || !data.ok) return (data && data.mensaje) || "El código no coincide.";
+    guardarCodigo("");
+    return true;
+  }
+  async function salir() {
+    await sb.auth.signOut();
+    datos = null;
+    modo(false);
+    mostrar("entrada");
+  }
+  $("btn-salir").addEventListener("click", salir);
+  $("salir-vincular").addEventListener("click", ev => { ev.preventDefault(); salir(); });
+  $("btn-actualizar").addEventListener("click", () => cargar());
+
+  // ---------- Datos ----------
+  async function cargar() {
+    $("cuerpo").innerHTML = '<div class="cargando">Cargando…</div>';
+    const { data: s } = await sb.auth.getSession();
+    if (!s.session) { mostrar("entrada"); return; }
+    let { data, error } = await sb.rpc("portal_mi_resumen_transaccional", { datos: {} });
+    if (error && error.code === "DC404" && codigoGuardado()) {
+      // Recién creada la cuenta: se usa el código que escribió al crearla.
+      const r = await reclamar(codigoGuardado());
+      if (r === true) ({ data, error } = await sb.rpc("portal_mi_resumen_transaccional", { datos: {} }));
+      else { $("error-vincular").textContent = r; mostrar("vincular"); return; }
+    }
+    if (error && error.code === "DC404") { $("error-vincular").textContent = ""; mostrar("vincular"); return; }
+    if (error) {
+      mostrar("app");
+      $("cuerpo").innerHTML = tarjeta("No se pudo cargar", "", vacio("Revise el internet y pulse ⟳ arriba.") + vacio(error.message));
+      return;
+    }
+    datos = data;
+    cargadoEn = Date.now();
+    mostrar("app");
+    pintar();
+  }
+
+  // ---------- Pantallas ----------
+  function pintar() {
+    document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.vista === vista));
+    const nombre = String(datos.cliente.nombres || "").split(" ")[0];
+    $("titulo").textContent = vista === "proceso" ? L.saludo() + (nombre ? ", " + nombre : "") : "Mis pagos";
+    $("subtitulo").textContent = vista === "proceso" ? "Estado de su proceso" : "Cuotas y recibos";
+    $("cuerpo").innerHTML = vista === "proceso" ? vistaProceso() : vistaPagos();
+    $("cuerpo").scrollTop = 0;
+  }
+
+  function vistaProceso() {
+    const exps = datos.expedientes || [];
+    if (!exps.length) return tarjeta("Su proceso", "", vacio("Todavía no hay un expediente registrado. Si tiene preguntas, comuníquese con el despacho."));
+    return exps.map(e => {
+      let h = '<div class="it"><div class="crece">' + esc(e.asunto || e.servicio || "Proceso") +
+        "<small>" + esc(e.servicio && e.asunto ? e.servicio + " · " : "") + "Abierto el " + esc(L.fechaCorta(e.apertura)) + "</small></div></div>";
+      if (e.rama && e.rama.fecha) {
+        h += item("a", "Última actuación en la Rama Judicial", esc(L.fechaCorta(e.rama.fecha)) + (e.rama.actuacion ? " · " + esc(String(e.rama.actuacion).slice(0, 220)) : "") +
+          "<br>Radicado " + esc(e.rama.radicado));
+      }
+      (e.actuaciones || []).forEach(a => { h += item("z", esc(a.nombre), esc(L.fechaCorta(a.fecha))); });
+      if (!(e.rama && e.rama.fecha) && !(e.actuaciones || []).length) h += vacio("Aún no hay actuaciones registradas.");
+      return tarjeta("Expediente " + esc(e.numero), esc(e.estado), h, e.rama && e.rama.fecha ? "mov" : "");
+    }).join("");
+  }
+
+  function vistaPagos() {
+    const contratos = datos.contratos || [];
+    if (!contratos.length) return tarjeta("Mis pagos", "", vacio("No hay contratos registrados."));
+    let saldo = 0, vencidas = 0, proxima = null;
+    contratos.forEach(k => (k.cuotas || []).forEach(q => {
+      const debe = Math.max(0, num(q.valor) - num(q.pagado));
+      if (debe <= 0) return;
+      saldo += debe;
+      const d = L.diasHasta(q.vencimiento);
+      if (d !== null && d < 0) vencidas++;
+      else if (d !== null && (proxima === null || d < proxima.d)) proxima = { d, q };
+    }));
+    let h = '<div class="res"><div><b>' + esc(pesos.format(saldo)) + "</b><span>Saldo pendiente</span></div><div><b>" + vencidas +
+      "</b><span>Cuotas vencidas</span></div><div><b>" + (proxima ? esc(L.fechaCorta(proxima.q.vencimiento).slice(0, 5)) : "—") +
+      "</b><span>Próxima cuota</span></div></div>";
+    contratos.forEach(k => {
+      const cuotas = (k.cuotas || []).map(q => {
+        const debe = Math.max(0, num(q.valor) - num(q.pagado));
+        const d = L.diasHasta(q.vencimiento);
+        const color = debe <= 0 ? "v" : d !== null && d < 0 ? "r" : d !== null && d <= 5 ? "a" : "z";
+        const estado = debe <= 0 ? "Pagada" : d !== null && d < 0 ? "Vencida" : num(q.pagado) > 0 ? "Pago parcial" : "Pendiente";
+        return item(color, "Cuota " + esc(q.numero) + ' · <span class="monto">' + esc(pesos.format(num(q.valor))) + "</span>",
+          esc(estado) + " · vence " + esc(L.fechaCorta(q.vencimiento)) + (num(q.pagado) > 0 && debe > 0 ? " · pagado " + esc(pesos.format(num(q.pagado))) : ""));
+      }).join("");
+      h += tarjeta("Contrato " + esc(k.numero), "Honorarios " + esc(pesos.format(num(k.honorarios))), cuotas || vacio("Sin cuotas."));
+      const pagos = (k.pagos || []).map(p => item("v", '<span class="monto">' + esc(pesos.format(num(p.monto))) + "</span> · " + esc(L.fechaCorta(p.fecha)),
+        (p.recibo ? "Recibo " + esc(p.recibo) + " · " : "") + esc(p.metodo || p.concepto || ""))).join("");
+      h += tarjeta("Pagos recibidos", (k.pagos || []).length, pagos || vacio("Todavía no hay pagos registrados."));
+    });
+    return h;
+  }
+
+  document.querySelector(".nav").addEventListener("click", ev => {
+    const b = ev.target.closest("button[data-vista]");
+    if (!b || !datos) return;
+    vista = b.dataset.vista;
+    pintar();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && datos && Date.now() - cargadoEn > 120000) cargar();
+  });
+
+  async function iniciar() {
+    const { data } = await sb.auth.getSession();
+    if (data.session) await cargar(); else mostrar("entrada");
+  }
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});
+  iniciar();
+})();
