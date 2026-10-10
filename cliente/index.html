@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi proceso · DC Gestión Jurídica</title>
+<meta name="theme-color" content="#102A43">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi proceso">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="stylesheet" href="../estilos.css">
+<style>
+  .pestanas-entrada { display:flex; gap:6px; width:100%; max-width:340px; }
+  .pestanas-entrada button { flex:1; padding:9px; border-radius:10px; border:1px solid #c9d6e3; background:none; color:#c9d6e3; font-family:inherit; font-size:14px; }
+  .pestanas-entrada .on { background:#fff; color:#102A43; font-weight:700; border-color:#fff; }
+  .ok { color:#9fe0b5; font-size:13px; }
+  .monto { font-weight:700; color:#102A43; }
+</style>
+</head>
+<body>
+<section id="entrada" class="entrada oculto">
+  <img src="../icono-192.png" alt="" class="logo-entrada">
+  <h1>Portal de clientes</h1>
+  <p class="gris">DC Gestión Jurídica</p>
+  <div class="pestanas-entrada">
+    <button id="tab-entrar" class="on" type="button">Entrar</button>
+    <button id="tab-crear" type="button">Crear mi cuenta</button>
+  </div>
+  <form id="form-entrada">
+    <input id="correo" type="email" autocomplete="username" placeholder="Su correo" required>
+    <input id="clave" type="password" autocomplete="current-password" placeholder="Contraseña" required minlength="8">
+    <input id="clave2" type="password" autocomplete="new-password" placeholder="Repita la contraseña" class="oculto" minlength="8">
+    <input id="codigo" type="text" autocomplete="one-time-code" placeholder="Código que le envió el despacho" class="oculto" autocapitalize="characters">
+    <button type="submit" id="btn-entrar">Entrar</button>
+  </form>
+  <p id="error-entrada" class="error"></p>
+  <p id="ok-entrada" class="ok"></p>
+</section>
+
+<section id="vincular" class="entrada oculto">
+  <img src="../icono-192.png" alt="" class="logo-entrada">
+  <h1>Último paso</h1>
+  <p class="gris">Escriba el código que le envió el despacho.</p>
+  <form id="form-vincular">
+    <input id="codigo2" type="text" autocomplete="one-time-code" placeholder="Código (ej. ABCD-2345)" required autocapitalize="characters">
+    <button type="submit" id="btn-vincular">Continuar</button>
+  </form>
+  <p id="error-vincular" class="error"></p>
+  <p><a href="#" id="salir-vincular" class="gris">Salir</a></p>
+</section>
+
+<section id="app" class="pant oculto">
+  <header class="cab">
+    <div class="t">
+      <img src="../icono-192.png" alt="">
+      <div class="crece"><b id="titulo">Mi proceso</b><small id="subtitulo">Portal de clientes</small></div>
+      <button id="btn-actualizar" class="cab-btn" title="Actualizar" aria-label="Actualizar">⟳</button>
+      <button id="btn-salir" class="cab-btn" title="Salir" aria-label="Salir">⏻</button>
+    </div>
+  </header>
+  <main id="cuerpo" class="cuerpo"></main>
+  <nav class="nav">
+    <button data-vista="proceso" class="on"><i>⚖️</i>Mi proceso</button>
+    <button data-vista="pagos"><i>💳</i>Mis pagos</button>
+  </nav>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../logica.js"></script>
+<script src="cliente.js"></script>
+</body>
+</html>
