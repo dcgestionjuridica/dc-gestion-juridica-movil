@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DC Jurídica</title>
+<meta name="theme-color" content="#102A43">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DC Jurídica">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<!-- Entrada: el mismo correo y contraseña del programa de escritorio. -->
+<section id="entrada" class="entrada oculto">
+  <img src="icono-192.png" alt="" class="logo-entrada">
+  <h1>DC Gestión Jurídica</h1>
+  <p class="gris">Entre con el mismo correo y contraseña del programa.</p>
+  <form id="form-entrada">
+    <input id="correo" type="email" autocomplete="username" placeholder="Correo" required>
+    <input id="clave" type="password" autocomplete="current-password" placeholder="Contraseña" required>
+    <button type="submit" id="btn-entrar">Entrar</button>
+  </form>
+  <p id="error-entrada" class="error"></p>
+</section>
+
+<!-- Aplicación -->
+<section id="app" class="pant oculto">
+  <header class="cab">
+    <div class="t">
+      <img src="icono-192.png" alt="">
+      <div class="crece"><b id="titulo">DC Jurídica</b><small id="subtitulo"></small></div>
+      <button id="btn-actualizar" class="cab-btn" title="Actualizar" aria-label="Actualizar">⟳</button>
+      <button id="btn-salir" class="cab-btn" title="Salir" aria-label="Salir">⏻</button>
+    </div>
+  </header>
+  <main id="cuerpo" class="cuerpo"></main>
+  <nav class="nav">
+    <button data-vista="inicio" class="on"><i>🏠</i>Inicio</button>
+    <button data-vista="pendientes"><i>✅</i>Pendientes</button>
+    <button data-vista="agenda"><i>📅</i>Agenda</button>
+    <button data-vista="procesos"><i>⚖️</i>Procesos</button>
+  </nav>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="logica.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
