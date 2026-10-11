@@ -13,8 +13,8 @@
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&display=swap">
-<link rel="stylesheet" href="../estilos.css?v=5">
-<script src="../tema.js?v=5"></script>
+<link rel="stylesheet" href="../estilos.css?v=6">
+<script src="../tema.js?v=6"></script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -51,7 +51,22 @@
   </form>
   <p id="error-entrada" class="error"></p>
   <p id="ok-entrada" class="ok"></p>
+  <a href="#" id="btn-olvido" class="enlace">¿Olvidó su contraseña?</a>
 </section>
+
+<section id="nueva-clave" class="entrada oculto">
+  <button class="cab-btn tema-flot" data-cambiar-tema type="button"><svg class="ic" width="22" height="22"><use href="#ic-luna"/></svg></button>
+  <img src="../icono-192.png" alt="" class="logo-entrada">
+  <h1>Nueva contraseña</h1>
+  <p class="gris">Escriba la contraseña nueva dos veces.</p>
+  <form id="form-nueva-clave">
+    <label class="campo">Contraseña nueva<span class="clave-caja"><input id="nueva1" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required minlength="8"><button type="button" class="ver-clave" data-ver-clave="nueva1" aria-label="Mostrar contraseña"><svg class="ic" width="22" height="22"><use href="#ic-ojo"/></svg></button></span></label>
+    <label class="campo">Repita la contraseña<input id="nueva2" type="password" autocomplete="new-password" required minlength="8"></label>
+    <button type="submit" id="btn-nueva-clave">Guardar contraseña</button>
+  </form>
+  <p id="error-nueva-clave" class="error"></p>
+</section>
+
 
 <section id="vincular" class="entrada oculto">
   <button class="cab-btn tema-flot" data-cambiar-tema type="button"><svg class="ic" width="22" height="22"><use href="#ic-luna"/></svg></button>
@@ -84,8 +99,9 @@
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="../config.js?v=5"></script>
-<script src="../logica.js?v=5"></script>
-<script src="cliente.js?v=5"></script>
+<script src="../config.js?v=6"></script>
+<script src="../logica.js?v=6"></script>
+<script src="../clave.js?v=6"></script>
+<script src="cliente.js?v=6"></script>
 </body>
 </html>
