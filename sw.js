@@ -1,7 +1,7 @@
 // Guarda la página (no los datos) para que abra rápido y se pueda instalar en el celular.
 // Siempre intenta primero internet; los datos de Supabase nunca se guardan aquí.
-const CACHE = "dc-movil-v5";
-const ARCHIVOS = ["./", "index.html", "estilos.css", "tema.js", "config.js", "logica.js", "app.js", "manifest.webmanifest",
+const CACHE = "dc-movil-v6";
+const ARCHIVOS = ["./", "index.html", "estilos.css", "tema.js", "config.js", "logica.js", "clave.js", "app.js", "manifest.webmanifest",
   "icono-192.png", "icono-512.png", "apple-touch-icon.png", "favicon-32.png",
   "cliente/", "cliente/index.html", "cliente/cliente.js", "cliente/manifest.webmanifest"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS))); self.skipWaiting(); });
