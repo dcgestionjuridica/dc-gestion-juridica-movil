@@ -13,8 +13,8 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&display=swap">
-<link rel="stylesheet" href="estilos.css">
-<script src="tema.js"></script>
+<link rel="stylesheet" href="estilos.css?v=5">
+<script src="tema.js?v=5"></script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -35,13 +35,13 @@
 </svg>
 <!-- Entrada: el mismo correo y contraseña del programa de escritorio. -->
 <section id="entrada" class="entrada oculto">
-  <button class="cab-btn tema-flot" data-cambiar-tema type="button"><svg class="ic"><use href="#ic-luna"/></svg></button>
+  <button class="cab-btn tema-flot" data-cambiar-tema type="button"><svg class="ic" width="22" height="22"><use href="#ic-luna"/></svg></button>
   <img src="icono-192.png" alt="" class="logo-entrada">
   <h1>DC Gestión Jurídica</h1>
   <p class="gris">Entre con el mismo correo y contraseña del programa.</p>
   <form id="form-entrada">
     <label class="campo">Correo<input id="correo" type="email" autocomplete="username" placeholder="nombre@correo.com" required></label>
-    <label class="campo">Contraseña<span class="clave-caja"><input id="clave" type="password" autocomplete="current-password" required><button type="button" class="ver-clave" data-ver-clave="clave" aria-label="Mostrar contraseña"><svg class="ic"><use href="#ic-ojo"/></svg></button></span></label>
+    <label class="campo">Contraseña<span class="clave-caja"><input id="clave" type="password" autocomplete="current-password" required><button type="button" class="ver-clave" data-ver-clave="clave" aria-label="Mostrar contraseña"><svg class="ic" width="22" height="22"><use href="#ic-ojo"/></svg></button></span></label>
     <button type="submit" id="btn-entrar">Entrar</button>
   </form>
   <p id="error-entrada" class="error"></p>
@@ -53,24 +53,24 @@
     <div class="t">
       <img src="icono-192.png" alt="">
       <div class="crece"><b id="titulo">DC Jurídica</b><small id="subtitulo"></small></div>
-      <button class="cab-btn" data-cambiar-tema type="button"><svg class="ic"><use href="#ic-luna"/></svg></button>
-      <button id="btn-actualizar" class="cab-btn" title="Actualizar" aria-label="Actualizar"><svg class="ic"><use href="#ic-actualizar"/></svg></button>
-      <button id="btn-salir" class="cab-btn" title="Salir" aria-label="Salir"><svg class="ic"><use href="#ic-salir"/></svg></button>
+      <button class="cab-btn" data-cambiar-tema type="button"><svg class="ic" width="22" height="22"><use href="#ic-luna"/></svg></button>
+      <button id="btn-actualizar" class="cab-btn" title="Actualizar" aria-label="Actualizar"><svg class="ic" width="22" height="22"><use href="#ic-actualizar"/></svg></button>
+      <button id="btn-salir" class="cab-btn" title="Salir" aria-label="Salir"><svg class="ic" width="22" height="22"><use href="#ic-salir"/></svg></button>
     </div>
-    <label class="buscar"><svg class="ic"><use href="#ic-buscar"/></svg><input id="buscar" type="search" placeholder="Buscar cliente, expediente o radicado" aria-label="Buscar"></label>
+    <label class="buscar"><svg class="ic" width="22" height="22"><use href="#ic-buscar"/></svg><input id="buscar" type="search" placeholder="Buscar cliente, expediente o radicado" aria-label="Buscar"></label>
   </header>
   <main id="cuerpo" class="cuerpo"></main>
   <nav class="nav">
-    <button data-vista="inicio" class="on"><span class="ic-caja"><svg class="ic"><use href="#ic-inicio"/></svg></span>Inicio</button>
-    <button data-vista="pendientes"><span class="ic-caja"><svg class="ic"><use href="#ic-check"/></svg></span>Pendientes</button>
-    <button data-vista="agenda"><span class="ic-caja"><svg class="ic"><use href="#ic-agenda"/></svg></span>Agenda</button>
-    <button data-vista="procesos"><span class="ic-caja"><svg class="ic"><use href="#ic-balanza"/></svg></span>Procesos</button>
+    <button data-vista="inicio" class="on"><span class="ic-caja"><svg class="ic" width="22" height="22"><use href="#ic-inicio"/></svg></span>Inicio</button>
+    <button data-vista="pendientes"><span class="ic-caja"><svg class="ic" width="22" height="22"><use href="#ic-check"/></svg></span>Pendientes</button>
+    <button data-vista="agenda"><span class="ic-caja"><svg class="ic" width="22" height="22"><use href="#ic-agenda"/></svg></span>Agenda</button>
+    <button data-vista="procesos"><span class="ic-caja"><svg class="ic" width="22" height="22"><use href="#ic-balanza"/></svg></span>Procesos</button>
   </nav>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js"></script>
-<script src="logica.js"></script>
-<script src="app.js"></script>
+<script src="config.js?v=5"></script>
+<script src="logica.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>
