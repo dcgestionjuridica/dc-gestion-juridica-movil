@@ -17,8 +17,9 @@
     return String(t === null || t === undefined ? "" : t)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
+  const ICONO = { r: "ic-alerta", a: "ic-campana", v: "ic-check", z: "ic-reloj" };
   function item(color, titulo, sub) {
-    return '<div class="it"><div class="pto ' + color + '"></div><div class="crece">' + titulo + (sub ? "<small>" + sub + "</small>" : "") + "</div></div>";
+    return '<div class="it"><div class="pto ' + color + '"><svg><use href="#' + (ICONO[color] || "ic-reloj") + '"/></svg></div><div class="crece">' + titulo + (sub ? "<small>" + sub + "</small>" : "") + "</div></div>";
   }
   function tarjeta(titulo, derecha, contenido, clase) {
     return '<div class="tarj ' + (clase || "") + '"><h3>' + titulo + (derecha !== "" && derecha !== undefined ? " <span>" + derecha + "</span>" : "") + "</h3>" + contenido + "</div>";
@@ -37,8 +38,8 @@
     modoCrear = crear;
     $("tab-entrar").classList.toggle("on", !crear);
     $("tab-crear").classList.toggle("on", crear);
-    $("clave2").classList.toggle("oculto", !crear);
-    $("codigo").classList.toggle("oculto", !crear);
+    $("caja-clave2").classList.toggle("oculto", !crear);
+    $("caja-codigo").classList.toggle("oculto", !crear);
     $("clave2").required = crear;
     $("codigo").required = crear;
     $("clave").autocomplete = crear ? "new-password" : "current-password";
@@ -118,7 +119,7 @@
 
   // ---------- Datos ----------
   async function cargar() {
-    $("cuerpo").innerHTML = '<div class="cargando">Cargando…</div>';
+    $("cuerpo").innerHTML = '<div class="cargando" aria-label="Cargando"><div></div><div></div><div></div></div>';
     const { data: s } = await sb.auth.getSession();
     if (!s.session) { mostrar("entrada"); return; }
     let { data, error } = await sb.rpc("portal_mi_resumen_transaccional", { datos: {} });
@@ -131,7 +132,7 @@
     if (error && error.code === "DC404") { $("error-vincular").textContent = ""; mostrar("vincular"); return; }
     if (error) {
       mostrar("app");
-      $("cuerpo").innerHTML = tarjeta("No se pudo cargar", "", vacio("Revise el internet y pulse ⟳ arriba.") + vacio(error.message));
+      $("cuerpo").innerHTML = tarjeta("No se pudo cargar", "", vacio("Revise el internet y pulse el botón Actualizar arriba.") + vacio(error.message));
       return;
     }
     datos = data;
@@ -169,18 +170,22 @@
   function vistaPagos() {
     const contratos = datos.contratos || [];
     if (!contratos.length) return tarjeta("Mis pagos", "", vacio("No hay contratos registrados."));
-    let saldo = 0, vencidas = 0, proxima = null;
+    let saldo = 0, vencidas = 0, proxima = null, total = 0, pagadoTotal = 0, cuotas = 0, pagadas = 0;
     contratos.forEach(k => (k.cuotas || []).forEach(q => {
       const debe = Math.max(0, num(q.valor) - num(q.pagado));
-      if (debe <= 0) return;
+      total += num(q.valor); pagadoTotal += Math.min(num(q.valor), num(q.pagado)); cuotas++;
+      if (debe <= 0) { pagadas++; return; }
       saldo += debe;
       const d = L.diasHasta(q.vencimiento);
       if (d !== null && d < 0) vencidas++;
       else if (d !== null && (proxima === null || d < proxima.d)) proxima = { d, q };
     }));
-    let h = '<div class="res"><div><b>' + esc(pesos.format(saldo)) + "</b><span>Saldo pendiente</span></div><div><b>" + vencidas +
-      "</b><span>Cuotas vencidas</span></div><div><b>" + (proxima ? esc(L.fechaCorta(proxima.q.vencimiento).slice(0, 5)) : "—") +
-      "</b><span>Próxima cuota</span></div></div>";
+    // Saldo en grande con la barra de lo pagado (Modelo B / C aprobado por Darío).
+    const avance = total > 0 ? Math.round((pagadoTotal / total) * 100) : 0;
+    let h = '<div class="saldo"><span class="lbl">Saldo pendiente</span><span class="cifra">' + esc(pesos.format(saldo)) + "</span>" +
+      '<div class="barra" role="progressbar" aria-valuenow="' + avance + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + avance + '%"></i></div>' +
+      '<div class="pie"><span>Ha pagado ' + pagadas + " de " + cuotas + " cuotas (" + avance + " %)</span><span>" +
+      (vencidas ? vencidas + (vencidas === 1 ? " cuota vencida" : " cuotas vencidas") : proxima ? "Próxima cuota " + esc(L.fechaCorta(proxima.q.vencimiento)) : "Al día") + "</span></div></div>";
     contratos.forEach(k => {
       const cuotas = (k.cuotas || []).map(q => {
         const debe = Math.max(0, num(q.valor) - num(q.pagado));
