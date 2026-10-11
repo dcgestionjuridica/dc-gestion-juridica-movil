@@ -30,7 +30,7 @@
   function codigoGuardado() { try { return localStorage.getItem(PENDIENTE) || ""; } catch (e) { return ""; } }
 
   function mostrar(id) {
-    ["entrada", "vincular", "app"].forEach(s => $(s).classList.toggle("oculto", s !== id));
+    ["entrada", "vincular", "app", "nueva-clave"].forEach(s => $(s).classList.toggle("oculto", s !== id));
   }
 
   // ---------- Entrar / crear cuenta ----------
@@ -44,6 +44,7 @@
     $("codigo").required = crear;
     $("clave").autocomplete = crear ? "new-password" : "current-password";
     $("btn-entrar").textContent = crear ? "Crear mi cuenta" : "Entrar";
+    $("btn-olvido").classList.toggle("oculto", crear);
     $("error-entrada").textContent = "";
     $("ok-entrada").textContent = "";
   }
@@ -213,9 +214,14 @@
     if (document.visibilityState === "visible" && datos && Date.now() - cargadoEn > 120000) cargar();
   });
 
+  // Recuperar contraseña: ver ../clave.js.
+  const CLAVE = window.DC_CLAVE;
+  CLAVE.preparar(sb, { alTerminar: () => cargar() });
   async function iniciar() {
     const { data } = await sb.auth.getSession();
-    if (data.session) await cargar(); else mostrar("entrada");
+    if (CLAVE.enRecuperacion && data.session) { mostrar("nueva-clave"); return; }
+    if (data.session) await cargar();
+    else { mostrar("entrada"); $("error-entrada").textContent = CLAVE.errorEnlace; }
   }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});
   iniciar();
