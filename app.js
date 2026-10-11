@@ -41,11 +41,13 @@
   // ---------- Entrada y salida ----------
   function mostrarEntrada(mensaje) {
     $("app").classList.add("oculto");
+    $("nueva-clave").classList.add("oculto");
     $("entrada").classList.remove("oculto");
     $("error-entrada").textContent = mensaje || "";
   }
   function mostrarApp() {
     $("entrada").classList.add("oculto");
+    $("nueva-clave").classList.add("oculto");
     $("app").classList.remove("oculto");
   }
   $("form-entrada").addEventListener("submit", async ev => {
@@ -261,9 +263,18 @@
     if (document.visibilityState === "visible" && datos && Date.now() - cargadoEn > 120000) cargar();
   });
 
+  // Recuperar contraseña: ver clave.js.
+  const CLAVE = window.DC_CLAVE;
+  CLAVE.preparar(sb, { alTerminar: () => cargar() });
   async function iniciar() {
     const { data } = await sb.auth.getSession();
-    if (data.session) await cargar(); else mostrarEntrada("");
+    if (CLAVE.enRecuperacion && data.session) {
+      $("app").classList.add("oculto");
+      $("entrada").classList.add("oculto");
+      $("nueva-clave").classList.remove("oculto");
+      return;
+    }
+    if (data.session) await cargar(); else mostrarEntrada(CLAVE.errorEnlace);
   }
 
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
