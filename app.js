@@ -24,8 +24,13 @@
     const e = datos.expedientesPorId[id];
     return e ? e.numero : "";
   }
+  // Cada estado lleva color e ícono (rojo = vencido, ámbar = pronto, verde = hecho, azul = programado).
+  const ICONO = { r: "ic-alerta", a: "ic-campana", v: "ic-check", z: "ic-reloj" };
+  function punto(color) { return '<div class="pto ' + color + '"><svg><use href="#' + (ICONO[color] || "ic-reloj") + '"/></svg></div>'; }
+  function titulo(icono, texto) { return '<span class="tit"><svg><use href="#' + icono + '"/></svg>' + texto + "</span>"; }
+  function norm(t) { return String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
   function item(color, titulo, sub) {
-    return '<div class="it"><div class="pto ' + color + '"></div><div class="crece">' + esc(titulo) +
+    return '<div class="it">' + punto(color) + '<div class="crece">' + esc(titulo) +
       (sub ? "<small>" + sub + "</small>" : "") + "</div></div>";
   }
   function tarjeta(titulo, derecha, contenido, clase) {
@@ -70,7 +75,7 @@
     return data || [];
   }
   async function cargar() {
-    $("cuerpo").innerHTML = '<div class="cargando">Cargando…</div>';
+    $("cuerpo").innerHTML = '<div class="cargando" aria-label="Cargando"><div></div><div></div><div></div></div>';
     try {
       const { data: s } = await sb.auth.getSession();
       if (!s.session) { mostrarEntrada(""); return; }
@@ -102,7 +107,7 @@
       const msg = e && e.message ? e.message : String(e);
       if (/JWT|session|token/i.test(msg)) { mostrarEntrada("La sesión venció. Entre de nuevo."); return; }
       mostrarApp();
-      $("cuerpo").innerHTML = '<div class="tarj">' + vacio("No fue posible leer los datos. Revise el internet y pulse ⟳ arriba.") +
+      $("cuerpo").innerHTML = '<div class="tarj">' + vacio("No fue posible leer los datos. Revise el internet y pulse el botón Actualizar arriba.") +
         '<div class="vacio">' + esc(msg) + "</div></div>";
     }
   }
@@ -119,9 +124,10 @@
       agenda: ["Agenda", "Próximos 30 días"],
       procesos: ["Procesos", "Radicados vigilados en la Rama Judicial"]
     };
-    $("titulo").textContent = encabezados[vista][0];
-    $("subtitulo").textContent = encabezados[vista][1];
-    const html = { inicio: vistaInicio, pendientes: vistaPendientes, agenda: vistaAgenda, procesos: vistaProcesos }[vista]();
+    const q = norm($("buscar").value.trim());
+    $("titulo").textContent = q.length >= 2 ? "Resultados" : encabezados[vista][0];
+    $("subtitulo").textContent = q.length >= 2 ? "Búsqueda en clientes, expedientes y radicados" : encabezados[vista][1];
+    const html = q.length >= 2 ? vistaBusqueda(q) : { inicio: vistaInicio, pendientes: vistaPendientes, agenda: vistaAgenda, procesos: vistaProcesos }[vista]();
     $("cuerpo").innerHTML = html;
     $("cuerpo").scrollTop = 0;
   }
@@ -141,9 +147,9 @@
       ? movidos.map(p => item("a", (p.cliente || "Sin cliente") + " · " + p.expediente_numero,
           esc(String(p.ultima_actuacion || "").split(" · ")[0]) + (p.ultima_fecha_actuacion ? " · " + esc(L.fechaCorta(p.ultima_fecha_actuacion)) : ""))).join("")
       : vacio("Sin actuaciones nuevas.");
-    h += tarjeta("⚖️ Movimiento en Rama Judicial", movidos.length ? "hoy" : "", mov, "mov");
+    h += tarjeta(titulo("ic-balanza", "Movimiento en Rama Judicial"), movidos.length ? "hoy" : "", mov, "mov");
     const proximos = g.vencidos.concat(g.semana, g.despues).slice(0, 3);
-    h += '<div class="tarj"><h3>⏰ Próximos vencimientos <a href="#" data-ir="pendientes">ver todos</a></h3>' +
+    h += '<div class="tarj"><h3>' + titulo("ic-reloj", "Próximos vencimientos") + ' <a href="#" data-ir="pendientes">ver todos</a></h3>' +
       (proximos.length ? proximos.map(lineaVencimiento).join("") : vacio("No hay vencimientos pendientes.")) + "</div>";
     return h;
   }
@@ -204,6 +210,24 @@
     }).join("");
   }
 
+  // Buscador de arriba: clientes, expedientes, vencimientos y radicados vigilados.
+  function vistaBusqueda(q) {
+    const coincide = (...textos) => textos.some(t => norm(t).includes(q));
+    const exps = datos.expedientes.filter(e => coincide(e.numero, nombreCliente(e.cliente_id)))
+      .sort((a, b) => String(b.fecha_apertura).localeCompare(String(a.fecha_apertura))).slice(0, 30);
+    const g = L.agruparVencimientos(datos.vencimientos);
+    const venc = g.vencidos.concat(g.semana, g.despues).filter(v => coincide(v.titulo, nombreCliente(v.cliente_id), numeroExpediente(v.expediente_id))).slice(0, 30);
+    const procs = datos.vigilancia.filter(p => coincide(p.radicado, p.cliente, p.expediente_numero)).slice(0, 30);
+    if (!exps.length && !venc.length && !procs.length) return tarjeta("Sin resultados", "", vacio("No hay nada que coincida con lo que escribió."));
+    let h = "";
+    if (exps.length) h += tarjeta("Expedientes", exps.length, exps.map(e => item("z", e.numero,
+      esc(nombreCliente(e.cliente_id) || "Sin cliente") + " · " + esc(e.estado || "") + (e.fecha_apertura ? " · abierto " + esc(L.fechaCorta(e.fecha_apertura)) : ""))).join(""));
+    if (venc.length) h += tarjeta("Vencimientos", venc.length, venc.map(lineaVencimiento).join(""));
+    if (procs.length) h += tarjeta("Procesos vigilados", procs.length, procs.map(p => item(p.pendiente ? "a" : "z", (p.cliente || "Sin cliente") + " · " + p.expediente_numero,
+      "Radicado " + esc(p.radicado) + (p.ultima_fecha_actuacion ? " · última actuación " + esc(L.fechaCorta(p.ultima_fecha_actuacion)) : ""))).join(""));
+    return h;
+  }
+
   function vistaProcesos() {
     const lista = datos.vigilancia;
     if (!lista.length) return tarjeta("Procesos vigilados", "", vacio("Todavía no hay radicados en vigilancia. Se agregan en el programa del PC, en la ficha del expediente."));
@@ -211,7 +235,7 @@
       const sub = "Radicado " + esc(p.radicado) + "<br>" +
         (p.ultima_fecha_actuacion ? "Última actuación: " + esc(L.fechaCorta(p.ultima_fecha_actuacion)) + (p.ultima_actuacion ? " · " + esc(String(p.ultima_actuacion).slice(0, 220)) : "") : "Aún sin revisar.") +
         '<br><a class="enlace" href="' + PORTAL + '" target="_blank" rel="noopener" data-radicado="' + esc(p.radicado) + '">Ver en el portal (copia el radicado)</a>';
-      return item(p.pendiente ? "a" : "z", (p.pendiente ? "● Movimiento nuevo · " : "") + (p.cliente || "Sin cliente") + " · " + p.expediente_numero, sub);
+      return item(p.pendiente ? "a" : "z", (p.pendiente ? "Movimiento nuevo · " : "") + (p.cliente || "Sin cliente") + " · " + p.expediente_numero, sub);
     }).join(""));
   }
 
@@ -220,8 +244,10 @@
     const b = ev.target.closest("button[data-vista]");
     if (!b) return;
     vista = b.dataset.vista;
+    $("buscar").value = "";
     pintar();
   });
+  $("buscar").addEventListener("input", () => pintar());
   $("cuerpo").addEventListener("click", ev => {
     const ir = ev.target.closest("[data-ir]");
     if (ir) { ev.preventDefault(); vista = ir.dataset.ir; pestana = "vencimientos"; pintar(); return; }
