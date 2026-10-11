@@ -149,3 +149,13 @@ html[data-tema="oscuro"] .pestanas-entrada .on { background:var(--nav-on); color
 /* Pedido de Darío: todos los campos del mismo ancho y alto. */
 .campo input, .clave-caja { width:100%; height:50px; }
 .chips { flex-wrap:wrap; overflow:visible; }
+
+/* En el computador (pantallas anchas) la web se ve centrada, con el ancho de un celular grande,
+   en vez de estirarse de lado a lado. */
+@media (min-width: 760px) {
+  html, body { background:#e9edf5; }
+  html[data-tema="oscuro"], html[data-tema="oscuro"] body { background:#070e19; }
+  .pant, .entrada { max-width:520px; margin:0 auto; box-shadow:0 0 0 1px var(--linea), 0 20px 50px rgba(15,37,64,.12); }
+  .pant { background:var(--fondo); }
+  html[data-tema="oscuro"] .pant { background:radial-gradient(120% 60% at 50% 0%,#1d3a63 0%,#0b1626 55%,#070e19 100%); }
+}
