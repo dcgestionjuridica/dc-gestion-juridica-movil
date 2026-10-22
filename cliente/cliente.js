@@ -140,6 +140,31 @@
     cargadoEn = Date.now();
     mostrar("app");
     pintar();
+    urgentes();
+  }
+
+  // V1.3.391: mensaje urgente del despacho. Sale en el centro durante 2 días; la X lo cierra para esta persona.
+  async function urgentes() {
+    const { data, error } = await sb.rpc("portal_mensajes_urgentes_transaccional", { datos: {} });
+    const lista = (!error && data && data.mensajes) || [];
+    if (!lista.length || document.getElementById("urgente-fondo")) return;
+    const m = lista[0];
+    const fondo = document.createElement("div");
+    fondo.id = "urgente-fondo";
+    fondo.setAttribute("role", "dialog");
+    fondo.setAttribute("aria-modal", "true");
+    fondo.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(10,20,40,.55);display:flex;align-items:center;justify-content:center;padding:16px";
+    fondo.innerHTML = '<div style="position:relative;max-width:440px;width:100%;background:var(--fondo,#fff);color:var(--texto,#1f2a3d);border-radius:14px;border-top:5px solid #c9a24a;box-shadow:0 18px 50px rgba(0,0,0,.35);padding:22px 20px 18px">' +
+      '<button type="button" id="urgente-x" aria-label="Cerrar" style="position:absolute;top:8px;right:8px;width:38px;height:38px;border:0;border-radius:50%;background:transparent;color:inherit;font-size:24px;line-height:1;cursor:pointer">&times;</button>' +
+      '<div style="display:flex;gap:10px;align-items:center;margin:0 34px 10px 0;color:#8a1c1c"><svg class="ic" width="26" height="26"><use href="#ic-alerta"/></svg><b style="font-size:17px">' + esc(m.titulo) + '</b></div>' +
+      '<div style="white-space:pre-line;font-size:15px;line-height:1.55">' + esc(m.mensaje) + '</div>' +
+      '<div style="margin-top:14px;font-size:12.5px;opacity:.75">' + esc(m.firma || "Carvajal & Rivera Abogados Asociados") + '</div></div>';
+    document.body.appendChild(fondo);
+    document.getElementById("urgente-x").onclick = async () => {
+      fondo.remove();
+      await sb.rpc("portal_mensaje_urgente_cerrar_transaccional", { datos: { id: m.id } });
+      urgentes();
+    };
   }
 
   // ---------- Pantallas ----------
@@ -152,7 +177,43 @@
     $("cuerpo").scrollTop = 0;
   }
 
+  // V1.3.391: avisos al celular (cuota por vencer, novedad en su proceso, proceso abierto o cerrado, mensajes
+  // importantes). El aviso no muestra datos personales; el detalle se ve aquí, en el portal.
+  function tarjetaAvisos() {
+    const P = window.DC_PUSH, est = P ? P.estado() : "no";
+    const como = "¿Cómo funciona? Le llega un aviso al celular cuando una cuota está por vencer, cuando hay una novedad en su proceso o cuando el despacho le envía un mensaje importante.";
+    let h;
+    if (est === "activo") h = item("a", "Avisos activados en este celular", "Puede quitarlos cuando quiera.") + '<button type="button" class="sec" data-push="quitar">Quitar avisos</button>';
+    else if (est === "iphone") h = vacio("En iPhone: toque el botón Compartir y luego «Agregar a inicio». Abra el portal desde ese ícono y aquí podrá activar los avisos (iOS 16.4 o más nuevo).");
+    else if (est === "denegado") h = vacio("Los avisos están bloqueados para esta página. Actívelos en los ajustes del navegador y vuelva a intentarlo.");
+    else if (est === "no") h = vacio("Este navegador no admite avisos.");
+    else h = '<button type="button" data-push="activar">Activar avisos en este celular</button>';
+    return tarjeta("Avisos al celular", "", '<p class="gris" style="margin:0 0 10px">' + esc(como) + "</p>" + h + '<p id="push-msg" class="gris"></p>');
+  }
+  document.addEventListener("click", async ev => {
+    const b = ev.target.closest && ev.target.closest("[data-push]");
+    if (!b || !window.DC_PUSH) return;
+    const P = window.DC_PUSH, msg = () => $("push-msg");
+    b.disabled = true;
+    if (b.dataset.push === "activar") {
+      const { data: k } = await sb.rpc("push_clave_publica_transaccional", { datos: {} });
+      await P.activar((k && k.clave) || "", "../sw.js", "../");
+      if (P.resultado) {
+        const { error } = await sb.rpc("push_suscribir_transaccional", { datos: JSON.parse(P.resultado) });
+        if (error) { try { localStorage.removeItem("dc-push-activo"); } catch (e) {} msg().textContent = "No se pudo activar: " + error.message; b.disabled = false; return; }
+      } else { msg().textContent = P.error; b.disabled = false; return; }
+    } else {
+      await P.desactivar();
+      if (P.resultado && P.resultado !== "{}") await sb.rpc("push_quitar_transaccional", { datos: JSON.parse(P.resultado) });
+    }
+    pintar();
+  });
+
   function vistaProceso() {
+    return vistaProcesos() + tarjetaAvisos();
+  }
+
+  function vistaProcesos() {
     const exps = datos.expedientes || [];
     if (!exps.length) return tarjeta("Su proceso", "", vacio("Todavía no hay un expediente registrado. Si tiene preguntas, comuníquese con el despacho."));
     return exps.map(e => {

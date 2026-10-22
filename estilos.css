@@ -214,3 +214,8 @@ html[data-tema="oscuro"] .pestanas-entrada .on { background:var(--nav-on); color
 }
 
 .enlace.apagado { opacity:.5; pointer-events:none; }
+/* V1.3.391: botones de «Avisos al celular» en el portal. */
+[data-push] { width:100%; padding:13px; border-radius:99px; border:0; background:var(--primario); color:var(--fondo); font-weight:700; font-size:15px; }
+html[data-tema="oscuro"] [data-push] { color:#0b1626; }
+[data-push].sec { background:none; border:1px solid var(--campo-borde); color:var(--texto); margin-top:8px; }
+[data-push]:disabled { opacity:.6; }
