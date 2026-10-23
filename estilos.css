@@ -264,3 +264,17 @@ html[data-tema="oscuro"] .caja-msj button { background:var(--primario); color:#0
 .tab-msj { border:1px solid var(--linea); background:var(--sup); color:var(--texto); border-radius:999px; padding:6px 14px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; }
 .tab-msj.on { background:#0f2246; color:#fff; border-color:#0f2246; }
 .tab-msj .n { background:#c62f2f; color:#fff; border-radius:999px; font-size:11px; padding:1px 6px; margin-left:4px; }
+
+/* V1.4.17: pantalla «Acerca de» (abogado y cliente) */
+.acerca { text-align:center; padding:6px 0 10px; }
+.acerca-logo { width:68px; height:68px; border-radius:20px; background:#0f2246; margin:4px auto 10px; display:grid; place-items:center; color:#c9a227; font-weight:800; font-size:24px; }
+.acerca-t { font-size:18px; font-weight:800; color:var(--texto); }
+.acerca-s { color:var(--texto2); font-size:12.5px; margin-bottom:12px; }
+.acerca-c { background:var(--sup); border:1px solid var(--linea); border-radius:14px; padding:12px 14px; text-align:left; margin-bottom:10px; color:var(--texto); font-size:13.5px; line-height:1.5; }
+.acerca-c b { display:block; margin-bottom:4px; }
+.acerca-c ul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+.acerca-c .num { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background:#c9a227; color:#fff; font-size:11px; font-weight:700; margin-right:8px; }
+.acerca-ver { margin-top:8px; color:var(--texto2); font-size:12px; text-align:center; }
+.acerca-ver b { display:block; color:var(--texto); font-size:14px; }
+.nav:has(button:nth-child(6)) .ic-caja { width:50px; }
+.nav:has(button:nth-child(6)) button { font-size:11px; min-width:0; padding-left:0; padding-right:0; }

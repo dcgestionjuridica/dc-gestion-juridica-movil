@@ -6,3 +6,6 @@ window.DC_CONFIG = {
   url: "https://bopiajeyzystoaumishw.supabase.co",
   clavePublica: "sb_publishable_ggggVf0N814HmKzfk0sQpw_srEZ1ZWg"
 };
+
+// Versión de las aplicaciones web del celular (abogado y cliente); se muestra en «Acerca de».
+window.DC_VERSION = "1.5.0";
