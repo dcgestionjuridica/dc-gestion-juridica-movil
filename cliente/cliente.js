@@ -197,6 +197,10 @@
     const dia = clave(d) === clave(hoy) ? "Hoy" : clave(d) === clave(ayer) ? "Ayer" : clave(d);
     return dia + " " + hm;
   }
+  // V1.4.16: a quién va dirigido el mensaje ("" = todo el despacho).
+  let abogados = [], destino = "";
+  const iniAbo = n => String(n || "").split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join("").toUpperCase();
+  const nomAbo = id => { const a = abogados.find(x => x.id === id); return a ? a.nombre : ""; };
   function vistaMensajes() {
     const e = (datos.expedientes || [])[0];
     let sup = "";
@@ -216,11 +220,16 @@
     if (!mensajes.length) h += '<div class="msj-aviso">Todavía no hay mensajes. Escríbanos su duda y le respondemos.</div>';
     mensajes.forEach(m => {
       h += '<div class="msj ' + (m.de === "cliente" ? "cli" : "abo") + '">' + esc(m.texto).replace(/\n/g, "<br>") +
-        '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div></div>";
+        '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div>" +
+        (m.de === "cliente" && m.para ? '<span class="para-tag">Para: ' + esc(m.para) + "</span>" : "") + "</div>";
     });
     h += '<div class="msj-aviso">' + esc(HORARIO) + "</div></div>" +
-      '<form id="form-msj" class="caja-msj"><textarea id="txt-msj" rows="1" maxlength="2000" placeholder="Escriba su mensaje…" aria-label="Escriba su mensaje"></textarea>' +
-      '<button type="submit" id="env-msj" aria-label="Enviar">➤</button></form><p id="err-msj" class="gris" style="margin:4px 14px"></p></div>';
+      '<form id="form-msj" class="caja-msj2"><div class="dest-lab">¿A quién va dirigido?</div><div class="dest-chips">' +
+      '<button type="button" class="dest-chip' + (destino === "" ? " on" : "") + '" data-destino=""><span class="dest-av oro">★</span>Todo el despacho</button>' +
+      abogados.map((a, i) => '<button type="button" class="dest-chip' + (destino === a.id ? " on" : "") + '" data-destino="' + esc(a.id) + '"><span class="dest-av ' + (i % 2 ? "azul" : "") + '">' + esc(iniAbo(a.nombre)) + "</span>" + esc(a.nombre) + (destino === a.id ? " ✓" : "") + "</button>").join("") +
+      '</div><div class="dest-lab">Su mensaje</div><textarea id="txt-msj" rows="3" maxlength="2000" placeholder="Escriba aquí su duda…" aria-label="Escriba su mensaje"></textarea>' +
+      '<button type="submit" id="env-msj" class="dest-enviar">Enviar ' + (destino ? "a " + esc(nomAbo(destino)) : "a todo el despacho") + '</button>' +
+      '<div class="dest-nota">' + (destino ? "Todo el equipo verá su mensaje; " + esc(nomAbo(destino)) + " será quien le responda." : "Todo el equipo verá su mensaje y le responderá quien pueda.") + '</div></form><p id="err-msj" class="gris" style="margin:4px 14px"></p></div>';
     return h;
   }
   async function cargarMensajes(avisar) {
@@ -234,14 +243,26 @@
       pintar(); if (t && $("txt-msj")) $("txt-msj").value = t;
     }
   }
+  async function cargarAbogados() {
+    if (abogados.length) return;
+    const { data, error } = await sb.rpc("portal_abogados_listar_transaccional", { datos: {} });
+    if (!error && data && data.abogados) abogados = data.abogados;
+  }
   async function abrirMensajes() {
     vista = "mensajes"; sinLeer = 0; pintar();
-    await cargarMensajes(true);
+    await Promise.all([cargarMensajes(true), cargarAbogados()]);
     pintar();
     clearInterval(sondeo);
     sondeo = setInterval(() => { if (vista === "mensajes" && document.visibilityState === "visible") cargarMensajes(false); else if (vista !== "mensajes") clearInterval(sondeo); }, 30000);
   }
   document.addEventListener("click", ev => {
+    const d = ev.target.closest && ev.target.closest("[data-destino]");
+    if (d && vista === "mensajes") {
+      destino = d.dataset.destino || "";
+      const t = $("txt-msj") ? $("txt-msj").value : "";
+      pintar(); if ($("txt-msj")) $("txt-msj").value = t;
+      return;
+    }
     const b = ev.target.closest && ev.target.closest("[data-mensajes]");
     if (!b || !datos) return;
     if (b.dataset.mensajes === "abrir") abrirMensajes();
@@ -267,7 +288,7 @@
     const caja = $("txt-msj"), texto = (caja.value || "").trim();
     if (!texto) return;
     $("env-msj").disabled = true; $("err-msj").textContent = "";
-    const { error } = await sb.rpc("portal_mensaje_enviar_transaccional", { datos: { texto } });
+    const { error } = await sb.rpc("portal_mensaje_enviar_transaccional", { datos: { texto, dirigido_a: destino || undefined } });
     if (error) { $("err-msj").textContent = error.message || "No se pudo enviar. Intente de nuevo."; $("env-msj").disabled = false; return; }
     caja.value = "";
     await cargarMensajes(true);

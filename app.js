@@ -11,7 +11,7 @@
   let cargadoEn = 0;
   let vista = "inicio";
   let pestana = "vencimientos";
-  let mensajes = { lista: [], abierto: null, hilo: [], error: "" };
+  let mensajes = { lista: [], abierto: null, hilo: [], error: "", filtro: "todos" };
 
   function esc(t) {
     return String(t === null || t === undefined ? "" : t)
@@ -157,7 +157,8 @@
         '<div id="hilo-abogado" class="hilo">';
       mensajes.hilo.forEach(m => {
         h += '<div class="msj ' + (m.de === "cliente" ? "abo" : "cli") + '">' + esc(m.texto).replace(/\n/g, "<br>") +
-          '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div></div>";
+          '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div>" +
+          (m.de === "cliente" && m.para ? '<span class="para-pill' + (m.para_mi ? " mi" : "") + '">' + (m.para_mi ? "Para ti" : "Para: " + esc(m.para)) + "</span>" : "") + "</div>";
       });
       h += '</div><form id="form-resp" class="caja-msj"><textarea id="txt-resp" rows="1" maxlength="2000" placeholder="Escriba su respuesta…" aria-label="Respuesta"></textarea>' +
         '<button type="submit" id="env-resp" aria-label="Responder">➤</button></form><p id="err-resp" class="gris" style="margin:4px 14px">' + esc(mensajes.error) + "</p></div>";
@@ -165,9 +166,14 @@
     }
     const filas = mensajes.lista || [];
     if (!filas.length) return tarjeta("Mensajes de clientes", "", vacio("Todavía ningún cliente ha escrito desde su portal."));
-    return tarjeta("Mensajes de clientes", filas.filter(f => f.por_responder).length + " por responder", filas.map(f =>
-      '<div class="it fila-msj" data-msj="abrir" data-cliente="' + esc(f.cliente_id) + '"><div class="pto ' + (f.por_responder ? "r" : "v") + '"><svg><use href="#' + (f.por_responder ? "ic-alerta" : "ic-check") + '"/></svg></div>' +
-      '<div class="crece"><b>' + esc(f.cliente) + "</b><small>" + esc(String(f.ultimo_texto || "").slice(0, 90)) + " · " + esc(f.por_responder ? "Por responder" : "Respondido") + "</small></div></div>").join(""));
+    const paraMi = filas.filter(f => f.para_mi && f.por_responder).length;
+    const fil = mensajes.filtro === "mi" ? filas.filter(f => f.para_mi) : mensajes.filtro === "resp" ? filas.filter(f => f.por_responder) : filas;
+    const tabs = '<div class="tabs-msj"><button type="button" class="tab-msj' + (mensajes.filtro === "todos" ? " on" : "") + '" data-filtro="todos">Todos</button>' +
+      '<button type="button" class="tab-msj' + (mensajes.filtro === "mi" ? " on" : "") + '" data-filtro="mi">Para mí' + (paraMi ? ' <span class="n">' + paraMi + "</span>" : "") + "</button>" +
+      '<button type="button" class="tab-msj' + (mensajes.filtro === "resp" ? " on" : "") + '" data-filtro="resp">Sin responder</button></div>';
+    return tabs + tarjeta("Mensajes de clientes", filas.filter(f => f.por_responder).length + " por responder", fil.length ? fil.map(f =>
+      '<div class="it fila-msj' + (f.para_mi && f.por_responder ? " para-mi" : "") + '" data-msj="abrir" data-cliente="' + esc(f.cliente_id) + '"><div class="pto ' + (f.por_responder ? "r" : "v") + '"><svg><use href="#' + (f.por_responder ? "ic-alerta" : "ic-check") + '"/></svg></div>' +
+      '<div class="crece"><b>' + esc(f.cliente) + '</b> <span class="para-pill' + (f.para_mi ? " mi" : "") + '">' + (f.para_mi ? "Para ti" : "Para: " + esc(f.para || "Todo el despacho")) + "</span><small>" + esc(String(f.ultimo_texto || "").slice(0, 90)) + " · " + esc(f.por_responder ? "Por responder" : "Respondido") + "</small></div></div>").join("") : vacio("No hay mensajes en esta pestaña."));
   }
   async function abrirHilo(f) {
     mensajes.abierto = f; mensajes.hilo = []; mensajes.error = ""; pintar();
@@ -180,6 +186,8 @@
     if (data) mensajes.lista = data.filas || [];
   }
   document.addEventListener("click", async ev => {
+    const fl = ev.target.closest && ev.target.closest("[data-filtro]");
+    if (fl && datos) { mensajes.filtro = fl.dataset.filtro; pintar(); return; }
     const b = ev.target.closest && ev.target.closest("[data-msj]");
     if (!b || !datos) return;
     if (b.dataset.msj === "volver") { mensajes.abierto = null; await recargarLista(); pintar(); return; }

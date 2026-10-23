@@ -243,3 +243,24 @@ html[data-tema="oscuro"] .caja-msj button { background:var(--primario); color:#0
 .nav .ic-caja .badge-msj { position:absolute; top:-2px; right:6px; min-width:18px; height:18px; border-radius:9px; background:#c0392b; color:#fff; font-size:11px; line-height:18px; text-align:center; padding:0 5px; }
 .fila-msj { cursor:pointer; }
 .fila-msj b { font-weight:700; }
+
+/* V1.4.16: elegir a qué abogado va dirigido el mensaje (portal) y etiqueta «Para: …» (portal y app del abogado) */
+.caja-msj2 { position:sticky; bottom:0; background:var(--fondo); padding:10px 0 2px; display:flex; flex-direction:column; gap:8px; }
+.dest-lab { font-size:12px; font-weight:700; color:var(--texto2); letter-spacing:.4px; text-transform:uppercase; }
+.dest-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.dest-chip { display:flex; gap:7px; align-items:center; border:1.5px solid var(--linea); background:var(--sup); color:var(--texto); border-radius:999px; padding:7px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+.dest-chip.on { border-color:#c9a227; background:#fbf3d9; color:#3d2e00; }
+.dest-av { width:24px; height:24px; border-radius:50%; background:#0f2246; color:#fff; font-size:11px; display:grid; place-items:center; flex:none; }
+.dest-av.oro { background:#c9a227; } .dest-av.azul { background:#2f5fd0; }
+.caja-msj2 textarea { width:100%; resize:none; border:1px solid var(--campo-borde); background:var(--campo); color:var(--texto); border-radius:12px; padding:12px; font:inherit; font-size:14px; }
+.dest-enviar { border:0; border-radius:12px; padding:12px; background:linear-gradient(180deg,#d4af37,#bf9b22); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+.dest-enviar:disabled { opacity:.5; }
+.dest-nota { font-size:12px; color:var(--texto2); }
+.para-tag, .para-pill { display:inline-block; margin-top:5px; font-size:11.5px; font-weight:700; border-radius:999px; padding:3px 9px; background:#eef1f7; color:#6b7a96; }
+.msj.cli .para-tag { background:#fbf3d9; color:#8a6b0a; }
+.para-pill.mi { background:#fbf3d9; color:#8a6b0a; }
+.fila-msj.para-mi { background:#fffbea; border-left:4px solid #c9a227; }
+.tabs-msj { display:flex; gap:8px; margin-bottom:10px; }
+.tab-msj { border:1px solid var(--linea); background:var(--sup); color:var(--texto); border-radius:999px; padding:6px 14px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+.tab-msj.on { background:#0f2246; color:#fff; border-color:#0f2246; }
+.tab-msj .n { background:#c62f2f; color:#fff; border-radius:999px; font-size:11px; padding:1px 6px; margin-left:4px; }
