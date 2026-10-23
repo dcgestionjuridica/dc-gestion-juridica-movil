@@ -139,6 +139,36 @@
     return item(L.colorPunto(v.dias), v.titulo, esc(cli || numeroExpediente(v.expediente_id)) + " · " + esc(v.dias !== null && v.dias <= 6 ? L.cuando(v.dias) : L.fechaCorta(v.fecha_vencimiento)));
   }
 
+  function tarjetaAvisos() {
+    const P = window.DC_PUSH, est = P ? P.estado() : "no";
+    const como = "¿Cómo funciona? Le llega un aviso a la barra de mensajes del celular cuando tiene una cita por comenzar o un vencimiento, tarea o recordatorio para hoy.";
+    let h;
+    if (est === "activo") h = item("a", "Avisos activados en este celular", "Puede quitarlos cuando quiera.") + '<button type="button" class="sec" data-push="quitar">Quitar avisos</button>';
+    else if (est === "iphone") h = vacio("En iPhone: toque el botón Compartir y luego «Agregar a inicio». Abra la app desde ese ícono y aquí podrá activar los avisos (iOS 16.4 o más nuevo).");
+    else if (est === "denegado") h = vacio("Los avisos están bloqueados para esta página. Actívelos en los ajustes del navegador (Permisos › Notificaciones) y vuelva a intentarlo.");
+    else if (est === "no") h = vacio("Este navegador no admite avisos.");
+    else h = '<button type="button" data-push="activar">Activar avisos en este celular</button>';
+    return tarjeta("Avisos al celular", "", '<p class="gris" style="margin:0 0 10px">' + esc(como) + "</p>" + h + '<p id="push-msg" class="gris"></p>');
+  }
+  document.addEventListener("click", async ev => {
+    const b = ev.target.closest && ev.target.closest("[data-push]");
+    if (!b || !window.DC_PUSH) return;
+    const P = window.DC_PUSH, msg = () => $("push-msg");
+    b.disabled = true;
+    if (b.dataset.push === "activar") {
+      const { data: k } = await sb.rpc("push_clave_publica_transaccional", { datos: {} });
+      await P.activar((k && k.clave) || "", "sw.js", "./");
+      if (P.resultado) {
+        const { error } = await sb.rpc("push_suscribir_transaccional", { datos: JSON.parse(P.resultado) });
+        if (error) { try { localStorage.removeItem("dc-push-activo"); } catch (e) {} msg().textContent = "No se pudo activar: " + error.message; b.disabled = false; return; }
+      } else { msg().textContent = P.error; b.disabled = false; return; }
+    } else {
+      await P.desactivar();
+      if (P.resultado && P.resultado !== "{}") await sb.rpc("push_quitar_transaccional", { datos: JSON.parse(P.resultado) });
+    }
+    pintar();
+  });
+
   function vistaInicio() {
     const g = L.agruparVencimientos(datos.vencimientos);
     const movidos = datos.vigilancia.filter(p => p.pendiente);
@@ -153,7 +183,7 @@
     const proximos = g.vencidos.concat(g.semana, g.despues).slice(0, 3);
     h += '<div class="tarj"><h3>' + titulo("ic-reloj", "Próximos vencimientos") + ' <a href="#" data-ir="pendientes">ver todos</a></h3>' +
       (proximos.length ? proximos.map(lineaVencimiento).join("") : vacio("No hay vencimientos pendientes.")) + "</div>";
-    return h;
+    return h + tarjetaAvisos();
   }
 
   function vistaPendientes() {
