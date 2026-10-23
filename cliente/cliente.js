@@ -142,7 +142,7 @@
     cargadoEn = Date.now();
     mostrar("app");
     pintar();
-    urgentes();
+    urgentes(); contarSinLeer();
   }
 
   // V1.3.391: mensaje urgente del despacho. Sale en el centro durante 2 días; la X lo cierra para esta persona.
@@ -173,7 +173,7 @@
   function pintar() {
     document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.vista === vista));
     const nombre = String(datos.cliente.nombres || "").split(" ")[0];
-    document.querySelector(".nav").classList.toggle("oculto", vista === "mensajes");
+    pintarInsignia();
     if (vista === "mensajes") {
       $("titulo").textContent = L.saludo() + (nombre ? ", " + nombre : "");
       $("subtitulo").textContent = "Carvajal & Rivera Abogados Asociados";
@@ -211,7 +211,6 @@
     }
     const quien = [...mensajes].reverse().find(m => m.de === "despacho");
     let h = '<div class="chat">' + sup +
-      '<button type="button" class="chat-volver" data-mensajes="volver">‹ Volver a mi proceso</button>' +
       '<div class="msj-aviso">Conversación sobre este proceso' + (quien && quien.quien ? " · " + esc(quien.quien) : "") + "</div>" +
       '<div id="hilo" class="hilo">';
     if (!mensajes.length) h += '<div class="msj-aviso">Todavía no hay mensajes. Escríbanos su duda y le respondemos.</div>';
@@ -236,7 +235,7 @@
     }
   }
   async function abrirMensajes() {
-    vista = "mensajes"; pintar();
+    vista = "mensajes"; sinLeer = 0; pintar();
     await cargarMensajes(true);
     pintar();
     clearInterval(sondeo);
@@ -246,8 +245,22 @@
     const b = ev.target.closest && ev.target.closest("[data-mensajes]");
     if (!b || !datos) return;
     if (b.dataset.mensajes === "abrir") abrirMensajes();
-    else { vista = "proceso"; clearInterval(sondeo); pintar(); }
   });
+  // V1.4.12: número de respuestas del despacho sin leer, en el botón «Tengo una duda» del menú de abajo.
+  let sinLeer = 0;
+  function pintarInsignia() {
+    const caja = document.querySelector('.nav button[data-vista="mensajes"] .ic-caja'); if (!caja) return;
+    let ins = caja.querySelector(".badge-msj");
+    if (!sinLeer || vista === "mensajes") { if (ins) ins.remove(); return; }
+    if (!ins) { ins = document.createElement("span"); ins.className = "badge-msj"; caja.appendChild(ins); }
+    ins.textContent = sinLeer > 9 ? "9+" : String(sinLeer);
+  }
+  async function contarSinLeer() {
+    const { data, error } = await sb.rpc("portal_mensajes_sin_leer_transaccional", { datos: {} });
+    if (error) return;
+    sinLeer = Number(data && data.cantidad) || 0; pintarInsignia();
+  }
+  setInterval(() => { if (datos && document.visibilityState === "visible" && vista !== "mensajes") contarSinLeer(); }, 60000);
   document.addEventListener("submit", async ev => {
     if (!ev.target || ev.target.id !== "form-msj") return;
     ev.preventDefault();
@@ -294,8 +307,7 @@
   });
 
   function vistaProceso() {
-    const boton = '<button type="button" class="btn-duda" data-mensajes="abrir">💬 Tengo una duda sobre mi caso</button>';
-    return vistaProcesos() + boton + tarjetaAvisos();
+    return vistaProcesos() + tarjetaAvisos();
   }
 
   function vistaProcesos() {
@@ -353,7 +365,8 @@
   document.querySelector(".nav").addEventListener("click", ev => {
     const b = ev.target.closest("button[data-vista]");
     if (!b || !datos) return;
-    vista = b.dataset.vista;
+    if (b.dataset.vista === "mensajes") { abrirMensajes(); return; }
+    vista = b.dataset.vista; clearInterval(sondeo);
     pintar();
   });
   document.addEventListener("visibilitychange", () => {
