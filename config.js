@@ -8,4 +8,4 @@ window.DC_CONFIG = {
 };
 
 // Versión de las aplicaciones web del celular (abogado y cliente); se muestra en «Acerca de».
-window.DC_VERSION = "1.5.3";
+window.DC_VERSION = "1.5.4";
