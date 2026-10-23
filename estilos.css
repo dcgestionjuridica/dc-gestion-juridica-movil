@@ -219,3 +219,27 @@ html[data-tema="oscuro"] .pestanas-entrada .on { background:var(--nav-on); color
 html[data-tema="oscuro"] [data-push] { color:#0b1626; }
 [data-push].sec { background:none; border:1px solid var(--campo-borde); color:var(--texto); margin-top:8px; }
 [data-push]:disabled { opacity:.6; }
+
+/* V1.4.11 · «Tengo una duda sobre mi caso» (portal del cliente) */
+.btn-duda { width:100%; border:0; border-radius:14px; padding:14px; font:inherit; font-weight:700; font-size:15px; background:#c9a227; color:#0f2246; cursor:pointer; margin:4px 0 2px; }
+.chat { display:flex; flex-direction:column; gap:10px; min-height:calc(100vh - 150px); }
+.msj-card { background:var(--sup); border:1px solid var(--linea); border-radius:14px; padding:10px 14px; font-size:13px; display:flex; flex-direction:column; gap:2px; color:var(--texto); }
+.msj-card b { color:var(--texto); }
+.chat-volver { align-self:flex-start; border:0; background:transparent; color:var(--texto2); font:inherit; font-size:13px; padding:2px 0; cursor:pointer; }
+.hilo { display:flex; flex-direction:column; gap:10px; flex:1; overflow-y:auto; max-height:calc(100vh - 330px); padding:2px 0; }
+.msj { max-width:84%; padding:9px 12px; border-radius:14px; font-size:14px; line-height:1.38; word-break:break-word; }
+.msj.cli { align-self:flex-end; background:#0f2246; color:#fff; border-bottom-right-radius:4px; }
+.msj.abo { align-self:flex-start; background:var(--sup); color:var(--texto); border:1px solid var(--linea); border-bottom-left-radius:4px; }
+.msj .hora { font-size:10.5px; opacity:.65; margin-top:3px; }
+.msj-aviso { font-size:11.5px; color:var(--texto2); text-align:center; padding:4px 10px; }
+.caja-msj { display:flex; gap:8px; align-items:flex-end; position:sticky; bottom:0; background:var(--fondo); padding:8px 0 2px; }
+.caja-msj textarea { flex:1; resize:none; border:1px solid var(--campo-borde); background:var(--campo); color:var(--texto); border-radius:20px; padding:10px 14px; font:inherit; font-size:14px; max-height:120px; }
+.caja-msj button { width:42px; height:42px; border:0; border-radius:50%; background:#0f2246; color:#fff; font-size:16px; cursor:pointer; }
+.caja-msj button:disabled { opacity:.5; }
+html[data-tema="oscuro"] .caja-msj button { background:var(--primario); color:#0b1626; }
+.nav.oculto { display:none; }
+
+/* V1.4.11 · mensajes de clientes en la app del celular */
+.nav .ic-caja .badge-msj { position:absolute; top:-2px; right:6px; min-width:18px; height:18px; border-radius:9px; background:#c0392b; color:#fff; font-size:11px; line-height:18px; text-align:center; padding:0 5px; }
+.fila-msj { cursor:pointer; }
+.fila-msj b { font-weight:700; }

@@ -11,6 +11,7 @@
   let cargadoEn = 0;
   let vista = "inicio";
   let pestana = "vencimientos";
+  let mensajes = { lista: [], abierto: null, hilo: [], error: "" };
 
   function esc(t) {
     return String(t === null || t === undefined ? "" : t)
@@ -82,7 +83,7 @@
       const { data: s } = await sb.auth.getSession();
       if (!s.session) { mostrarEntrada(""); return; }
       const uid = s.session.user.id;
-      const [perfiles, clientes, expedientes, vencimientos, terminos, eventos, tareas, agenda, vigilancia] = await Promise.all([
+      const [perfiles, clientes, expedientes, vencimientos, terminos, eventos, tareas, agenda, vigilancia, filasMsj] = await Promise.all([
         leer(sb.from("perfiles").select("nombre,rol,activo").eq("id", uid)),
         leer(sb.from("clientes").select("id,nombres,apellidos,archivado")),
         leer(sb.from("expedientes").select("id,cliente_id,numero,estado,fecha_apertura,archivado_en")),
@@ -91,7 +92,8 @@
         leer(sb.from("eventos_juridicos").select("id,expediente_id,fecha_evento,tipo_evento")),
         leer(sb.from("tareas_juridicas").select("id,vencimiento_id,titulo,responsable,fecha_limite,estado")),
         leer(sb.from("eventos_agenda").select("id,titulo,descripcion,fecha,hora,tipo")),
-        sb.rpc("vigilancia_listar_transaccional", { datos: {} }).then(r => (r.error ? [] : (r.data && r.data.procesos) || []))
+        sb.rpc("vigilancia_listar_transaccional", { datos: {} }).then(r => (r.error ? [] : (r.data && r.data.procesos) || [])),
+        sb.rpc("mensajes_clientes_lista_transaccional", { datos: {} }).then(r => (r.error ? [] : (r.data && r.data.filas) || []))
       ]);
       const perfil = perfiles[0];
       if (!perfil || perfil.activo === false) {
@@ -102,6 +104,7 @@
       datos = { perfil, clientes, expedientes, vencimientos, terminos, eventos, tareas, agenda, vigilancia, clientesPorId: {}, expedientesPorId: {} };
       clientes.forEach(c => (datos.clientesPorId[c.id] = c));
       expedientes.forEach(e => (datos.expedientesPorId[e.id] = e));
+      mensajes.lista = filasMsj;
       cargadoEn = Date.now();
       mostrarApp();
       pintar();
@@ -124,15 +127,78 @@
       inicio: [L.saludo(hoy) + (nombre ? ", " + nombre : ""), L.fechaLarga(hoy)],
       pendientes: ["Pendientes", "Lo mismo que en el programa del PC"],
       agenda: ["Agenda", "Próximos 30 días"],
-      procesos: ["Procesos", "Radicados vigilados en la Rama Judicial"]
+      procesos: ["Procesos", "Radicados vigilados en la Rama Judicial"],
+      mensajes: ["Mensajes de clientes", "Lo que sus clientes le escriben desde el celular"]
     };
     const q = norm($("buscar").value.trim());
     $("titulo").textContent = q.length >= 2 ? "Resultados" : encabezados[vista][0];
     $("subtitulo").textContent = q.length >= 2 ? "Búsqueda en clientes, expedientes y radicados" : encabezados[vista][1];
-    const html = q.length >= 2 ? vistaBusqueda(q) : { inicio: vistaInicio, pendientes: vistaPendientes, agenda: vistaAgenda, procesos: vistaProcesos }[vista]();
+    const html = q.length >= 2 ? vistaBusqueda(q) : { inicio: vistaInicio, pendientes: vistaPendientes, agenda: vistaAgenda, procesos: vistaProcesos, mensajes: vistaMensajes }[vista]();
     $("cuerpo").innerHTML = html;
     $("cuerpo").scrollTop = 0;
+    const porResponder = (mensajes.lista || []).filter(f => f.por_responder).length;
+    const bm = $("badge-msj");
+    if (bm) { bm.textContent = porResponder; bm.classList.toggle("oculto", porResponder === 0); }
+    if (vista === "mensajes" && mensajes.abierto) { const h = $("hilo-abogado"); if (h) h.scrollTop = h.scrollHeight; }
   }
+
+  // V1.4.11 · «Tengo una duda sobre mi caso»: el abogado responde desde el celular, con las mismas funciones del servidor que usa el programa del PC.
+  function horaMsj(iso) {
+    const d = new Date(iso); if (isNaN(d)) return "";
+    const clave = x => x.toLocaleDateString("es-CO", { timeZone: "America/Bogota" });
+    const dia = clave(d) === clave(new Date()) ? "Hoy" : clave(d) === clave(new Date(Date.now() - 86400000)) ? "Ayer" : clave(d);
+    return dia + " " + d.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Bogota" });
+  }
+  function vistaMensajes() {
+    if (mensajes.abierto) {
+      const f = mensajes.abierto;
+      let h = '<div class="chat"><button type="button" class="chat-volver" data-msj="volver">‹ Volver a los mensajes</button>' +
+        '<div class="msj-card"><b>' + esc(f.cliente) + "</b>" + (f.expediente ? "<span>Proceso " + esc(f.expediente) + "</span>" : "") + "</div>" +
+        '<div id="hilo-abogado" class="hilo">';
+      mensajes.hilo.forEach(m => {
+        h += '<div class="msj ' + (m.de === "cliente" ? "abo" : "cli") + '">' + esc(m.texto).replace(/\n/g, "<br>") +
+          '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div></div>";
+      });
+      h += '</div><form id="form-resp" class="caja-msj"><textarea id="txt-resp" rows="1" maxlength="2000" placeholder="Escriba su respuesta…" aria-label="Respuesta"></textarea>' +
+        '<button type="submit" id="env-resp" aria-label="Responder">➤</button></form><p id="err-resp" class="gris" style="margin:4px 14px">' + esc(mensajes.error) + "</p></div>";
+      return h;
+    }
+    const filas = mensajes.lista || [];
+    if (!filas.length) return tarjeta("Mensajes de clientes", "", vacio("Todavía ningún cliente ha escrito desde su portal."));
+    return tarjeta("Mensajes de clientes", filas.filter(f => f.por_responder).length + " por responder", filas.map(f =>
+      '<div class="it fila-msj" data-msj="abrir" data-cliente="' + esc(f.cliente_id) + '"><div class="pto ' + (f.por_responder ? "r" : "v") + '"><svg><use href="#' + (f.por_responder ? "ic-alerta" : "ic-check") + '"/></svg></div>' +
+      '<div class="crece"><b>' + esc(f.cliente) + "</b><small>" + esc(String(f.ultimo_texto || "").slice(0, 90)) + " · " + esc(f.por_responder ? "Por responder" : "Respondido") + "</small></div></div>").join(""));
+  }
+  async function abrirHilo(f) {
+    mensajes.abierto = f; mensajes.hilo = []; mensajes.error = ""; pintar();
+    const { data, error } = await sb.rpc("mensajes_cliente_hilo_transaccional", { datos: { cliente_id: f.cliente_id } });
+    if (error) mensajes.error = error.message; else { mensajes.hilo = (data && data.mensajes) || []; f.por_responder = f.por_responder; }
+    pintar();
+  }
+  async function recargarLista() {
+    const { data } = await sb.rpc("mensajes_clientes_lista_transaccional", { datos: {} });
+    if (data) mensajes.lista = data.filas || [];
+  }
+  document.addEventListener("click", async ev => {
+    const b = ev.target.closest && ev.target.closest("[data-msj]");
+    if (!b || !datos) return;
+    if (b.dataset.msj === "volver") { mensajes.abierto = null; await recargarLista(); pintar(); return; }
+    const f = (mensajes.lista || []).find(x => String(x.cliente_id) === b.dataset.cliente);
+    if (f) abrirHilo(f);
+  });
+  document.addEventListener("submit", async ev => {
+    if (!ev.target || ev.target.id !== "form-resp" || !mensajes.abierto) return;
+    ev.preventDefault();
+    const caja = $("txt-resp"), texto = (caja.value || "").trim();
+    if (!texto) return;
+    $("env-resp").disabled = true;
+    const f = mensajes.abierto;
+    const { error } = await sb.rpc("mensaje_responder_transaccional", { datos: { cliente_id: f.cliente_id, texto } });
+    if (error) { mensajes.error = error.message; pintar(); return; }
+    mensajes.error = "";
+    await abrirHilo(f);
+    await recargarLista();
+  });
 
   function lineaVencimiento(v) {
     const cli = nombreCliente(v.cliente_id);

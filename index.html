@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&display=swap">
-<link rel="stylesheet" href="estilos.css?v=8">
+<link rel="stylesheet" href="estilos.css?v=10">
 <script src="tema.js?v=8"></script>
 <script>try{if(sessionStorage.getItem("dc-intro-vista"))document.documentElement.classList.add("sin-intro")}catch(e){}</script>
 </head>
@@ -39,6 +39,8 @@
   <symbol id="n-inicio-r" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12.6 3.2a1 1 0 0 0-1.2 0L3.2 9.65a1.3 1.3 0 0 0-.45 1V19a3 3 0 0 0 3 3h3.5v-5.6a2.75 2.75 0 0 1 5.5 0V22h3.5a3 3 0 0 0 3-3v-8.35a1.3 1.3 0 0 0-.45-1z" fill="currentColor"/></symbol>
   <symbol id="n-pend-l" viewBox="0 0 24 24"><rect x="3.75" y="3.75" width="16.5" height="16.5" rx="5" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="m8.2 12.2 2.6 2.6 5-5.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="n-pend-r" viewBox="0 0 24 24"><mask id="m-pend"><rect width="24" height="24" fill="#fff"/><path d="m8.2 12.2 2.6 2.6 5-5.4" fill="none" stroke="#000" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></mask><rect x="2.9" y="2.9" width="18.2" height="18.2" rx="5.6" fill="currentColor" mask="url(#m-pend)"/></symbol>
+  <symbol id="n-msj-l" viewBox="0 0 24 24"><path d="M5.5 4.5h13a2.5 2.5 0 0 1 2.5 2.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.2 3.2c-.5.4-1.3 0-1.3-.6v-2.6h0A2.5 2.5 0 0 1 3 15V7a2.5 2.5 0 0 1 2.5-2.5z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><path d="M8 9.5h8M8 12.5h5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
+  <symbol id="n-msj-r" viewBox="0 0 24 24"><path d="M5.5 4h13A3 3 0 0 1 21.5 7v8a3 3 0 0 1-3 3H11.2l-4 3.1c-.8.6-1.7 0-1.7-.8V18A3 3 0 0 1 2.5 15V7a3 3 0 0 1 3-3z" fill="currentColor"/><path d="M8 9.5h8M8 12.5h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".9"/></symbol>
   <symbol id="n-agenda-l" viewBox="0 0 24 24"><rect x="3.75" y="5" width="16.5" height="15.5" rx="4.2" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M3.75 10h16.5M8.3 3v3.6M15.7 3v3.6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="8.6" cy="14.2" r="1.15" fill="currentColor"/><circle cx="12" cy="14.2" r="1.15" fill="currentColor"/><circle cx="15.4" cy="14.2" r="1.15" fill="currentColor"/><circle cx="8.6" cy="17.4" r="1.15" fill="currentColor"/></symbol>
   <symbol id="n-agenda-r" viewBox="0 0 24 24"><mask id="m-agenda"><rect width="24" height="24" fill="#fff"/><path d="M3 10.2h18" stroke="#000" stroke-width="1.6"/><circle cx="8.6" cy="14.4" r="1.25" fill="#000"/><circle cx="12" cy="14.4" r="1.25" fill="#000"/><circle cx="15.4" cy="14.4" r="1.25" fill="#000"/><circle cx="8.6" cy="17.6" r="1.25" fill="#000"/></mask><rect x="2.9" y="4.4" width="18.2" height="16.9" rx="4.6" fill="currentColor" mask="url(#m-agenda)"/><path d="M8.3 2.6v3.4M15.7 2.6v3.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="n-balanza-l" viewBox="0 0 24 24"><path d="M12 4.2v15.6M7.5 20.4h9M5.2 7.4h13.6M12 4.2a1.3 1.3 0 1 0 0-.01" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="m5.2 7.4-2.7 6.3h5.4zM18.8 7.4l-2.7 6.3h5.4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M2.5 13.7a2.7 2.7 0 0 0 5.4 0M16.1 13.7a2.7 2.7 0 0 0 5.4 0" fill="none" stroke="currentColor" stroke-width="1.75"/></symbol>
@@ -94,6 +96,7 @@
     <button data-vista="pendientes"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-pend-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-pend-r"/></svg></span><span class="nav-txt">Pendientes</span></button>
     <button data-vista="agenda"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-agenda-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-agenda-r"/></svg></span><span class="nav-txt">Agenda</span></button>
     <button data-vista="procesos"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-balanza-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-balanza-r"/></svg></span><span class="nav-txt">Procesos</span></button>
+    <button data-vista="mensajes"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-msj-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-msj-r"/></svg><b id="badge-msj" class="badge-msj oculto"></b></span><span class="nav-txt">Mensajes</span></button>
   </nav>
 </section>
 

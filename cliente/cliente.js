@@ -12,6 +12,8 @@
   let cargadoEn = 0;
   let vista = "proceso";
   let modoCrear = false;
+  let mensajes = [];
+  let sondeo = null;
 
   function esc(t) {
     return String(t === null || t === undefined ? "" : t)
@@ -171,11 +173,93 @@
   function pintar() {
     document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.vista === vista));
     const nombre = String(datos.cliente.nombres || "").split(" ")[0];
+    document.querySelector(".nav").classList.toggle("oculto", vista === "mensajes");
+    if (vista === "mensajes") {
+      $("titulo").textContent = L.saludo() + (nombre ? ", " + nombre : "");
+      $("subtitulo").textContent = "Carvajal & Rivera Abogados Asociados";
+      $("cuerpo").innerHTML = vistaMensajes();
+      const hilo = $("hilo"); if (hilo) hilo.scrollTop = hilo.scrollHeight;
+      return;
+    }
     $("titulo").textContent = vista === "proceso" ? L.saludo() + (nombre ? ", " + nombre : "") : "Mis pagos";
     $("subtitulo").textContent = vista === "proceso" ? "Estado de su proceso" : "Cuotas y recibos";
     $("cuerpo").innerHTML = vista === "proceso" ? vistaProceso() : vistaPagos();
     $("cuerpo").scrollTop = 0;
   }
+
+  // V1.4.11: «Tengo una duda sobre mi caso». El cliente le escribe al despacho; la conversación queda en su ficha.
+  const HORARIO = "Le respondemos en horario de oficina, de 8:00 a. m. a 5:00 p. m. Si es urgente, llámenos al 312 783 7570.";
+  function horaMsj(iso) {
+    const d = new Date(iso); if (isNaN(d)) return "";
+    const hoy = new Date(), ayer = new Date(Date.now() - 86400000);
+    const hm = d.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).replace("a. m.", "a. m.").replace("p. m.", "p. m.");
+    const clave = x => x.toLocaleDateString("es-CO", { timeZone: "America/Bogota" });
+    const dia = clave(d) === clave(hoy) ? "Hoy" : clave(d) === clave(ayer) ? "Ayer" : clave(d);
+    return dia + " " + hm;
+  }
+  function vistaMensajes() {
+    const e = (datos.expedientes || [])[0];
+    let sup = "";
+    if (e) {
+      let prox = null;
+      (datos.contratos || []).forEach(k => (k.cuotas || []).forEach(q => {
+        const debe = Math.max(0, num(q.valor) - num(q.pagado)); const d = L.diasHasta(q.vencimiento);
+        if (debe > 0 && d !== null && d >= 0 && (prox === null || d < prox.d)) prox = { d, q, debe };
+      }));
+      sup = '<div class="msj-card"><b>Proceso ' + esc(e.numero) + (e.servicio ? " · " + esc(e.servicio) : "") + "</b>" +
+        (prox ? "<span>Próxima cuota: " + esc(L.fechaCorta(prox.q.vencimiento)) + " · " + esc(pesos.format(prox.debe)) + "</span>" : "") + "</div>";
+    }
+    const quien = [...mensajes].reverse().find(m => m.de === "despacho");
+    let h = '<div class="chat">' + sup +
+      '<button type="button" class="chat-volver" data-mensajes="volver">‹ Volver a mi proceso</button>' +
+      '<div class="msj-aviso">Conversación sobre este proceso' + (quien && quien.quien ? " · " + esc(quien.quien) : "") + "</div>" +
+      '<div id="hilo" class="hilo">';
+    if (!mensajes.length) h += '<div class="msj-aviso">Todavía no hay mensajes. Escríbanos su duda y le respondemos.</div>';
+    mensajes.forEach(m => {
+      h += '<div class="msj ' + (m.de === "cliente" ? "cli" : "abo") + '">' + esc(m.texto).replace(/\n/g, "<br>") +
+        '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div></div>";
+    });
+    h += '<div class="msj-aviso">' + esc(HORARIO) + "</div></div>" +
+      '<form id="form-msj" class="caja-msj"><textarea id="txt-msj" rows="1" maxlength="2000" placeholder="Escriba su mensaje…" aria-label="Escriba su mensaje"></textarea>' +
+      '<button type="submit" id="env-msj" aria-label="Enviar">➤</button></form><p id="err-msj" class="gris" style="margin:4px 14px"></p></div>';
+    return h;
+  }
+  async function cargarMensajes(avisar) {
+    const { data, error } = await sb.rpc("portal_mensajes_mios_transaccional", { datos: {} });
+    if (error) { if (avisar && $("err-msj")) $("err-msj").textContent = "No se pudieron cargar los mensajes: " + error.message; return; }
+    const nuevos = (data && data.mensajes) || [];
+    const cambio = nuevos.length !== mensajes.length;
+    mensajes = nuevos;
+    if (vista === "mensajes" && cambio) {
+      const t = $("txt-msj") ? $("txt-msj").value : "";
+      pintar(); if (t && $("txt-msj")) $("txt-msj").value = t;
+    }
+  }
+  async function abrirMensajes() {
+    vista = "mensajes"; pintar();
+    await cargarMensajes(true);
+    pintar();
+    clearInterval(sondeo);
+    sondeo = setInterval(() => { if (vista === "mensajes" && document.visibilityState === "visible") cargarMensajes(false); else if (vista !== "mensajes") clearInterval(sondeo); }, 30000);
+  }
+  document.addEventListener("click", ev => {
+    const b = ev.target.closest && ev.target.closest("[data-mensajes]");
+    if (!b || !datos) return;
+    if (b.dataset.mensajes === "abrir") abrirMensajes();
+    else { vista = "proceso"; clearInterval(sondeo); pintar(); }
+  });
+  document.addEventListener("submit", async ev => {
+    if (!ev.target || ev.target.id !== "form-msj") return;
+    ev.preventDefault();
+    const caja = $("txt-msj"), texto = (caja.value || "").trim();
+    if (!texto) return;
+    $("env-msj").disabled = true; $("err-msj").textContent = "";
+    const { error } = await sb.rpc("portal_mensaje_enviar_transaccional", { datos: { texto } });
+    if (error) { $("err-msj").textContent = error.message || "No se pudo enviar. Intente de nuevo."; $("env-msj").disabled = false; return; }
+    caja.value = "";
+    await cargarMensajes(true);
+    pintar();
+  });
 
   // V1.3.391: avisos al celular (cuota por vencer, novedad en su proceso, proceso abierto o cerrado, mensajes
   // importantes). El aviso no muestra datos personales; el detalle se ve aquí, en el portal.
@@ -210,7 +294,8 @@
   });
 
   function vistaProceso() {
-    return vistaProcesos() + tarjetaAvisos();
+    const boton = '<button type="button" class="btn-duda" data-mensajes="abrir">💬 Tengo una duda sobre mi caso</button>';
+    return vistaProcesos() + boton + tarjetaAvisos();
   }
 
   function vistaProcesos() {
