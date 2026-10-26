@@ -63,7 +63,10 @@
     }
     $("clave").value = "";
     await iniciar();
+    // 26/10/2026: después de entrar con contraseña se ofrece «Entrar con huella» (una vez por equipo).
+    if (window.DCHuella) DCHuella.ofrecer();
   });
+  if (window.DCHuella) DCHuella.montar(sb, "movil", iniciar);
   $("btn-salir").addEventListener("click", async () => {
     await sb.auth.signOut();
     datos = null;

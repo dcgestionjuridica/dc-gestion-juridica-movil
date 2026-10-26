@@ -45,12 +45,13 @@
     $("clave2").required = crear;
     $("codigo").required = crear;
     $("clave").autocomplete = crear ? "new-password" : "current-password";
-    $("btn-entrar").textContent = crear ? "Crear mi cuenta" : "Entrar";
+    $("btn-entrar").textContent = crear ? "Crear mi cuenta" : (window.DCHuella && DCHuella.activa ? "Entrar con contraseña" : "Entrar");
     $("btn-olvido").classList.toggle("oculto", crear);
     $("error-entrada").textContent = "";
     $("ok-entrada").textContent = "";
   }
   $("tab-entrar").addEventListener("click", () => modo(false));
+  if (window.DCHuella) DCHuella.montar(sb, "cliente", iniciar);
   $("tab-crear").addEventListener("click", () => modo(true));
 
   $("form-entrada").addEventListener("submit", async ev => {
@@ -82,6 +83,8 @@
         if (error) { $("error-entrada").textContent = traducir(error.message); return; }
         $("clave").value = "";
         await iniciar();
+        // 26/10/2026: después de entrar con contraseña se ofrece «Entrar con huella» (una vez por equipo).
+        if (window.DCHuella) DCHuella.ofrecer();
       }
     } finally {
       $("btn-entrar").disabled = false;
