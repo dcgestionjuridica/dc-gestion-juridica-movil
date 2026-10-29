@@ -28,6 +28,10 @@
   }
   function vacio(t) { return '<div class="vacio">' + esc(t) + "</div>"; }
   function num(v) { const n = Number(v); return isFinite(n) ? n : 0; }
+  // Valor en pesos. Con «Ocultar valores» (Configuración) sale como $ •••• hasta que lo toque.
+  function plata(v, suave) {
+    return '<span class="monto' + (suave ? " suave" : "") + '"><span class="mv">' + esc(pesos.format(num(v))) + '</span><span class="mo">$ ••••</span></span>';
+  }
   function guardarCodigo(c) { try { c ? localStorage.setItem(PENDIENTE, c) : localStorage.removeItem(PENDIENTE); } catch (e) {} }
   function codigoGuardado() { try { return localStorage.getItem(PENDIENTE) || ""; } catch (e) { return ""; } }
 
@@ -45,7 +49,7 @@
     $("clave2").required = crear;
     $("codigo").required = crear;
     $("clave").autocomplete = crear ? "new-password" : "current-password";
-    $("btn-entrar").textContent = crear ? "Crear mi cuenta" : (window.DCHuella && DCHuella.activa ? "Entrar con contraseña" : "Entrar");
+    $("btn-entrar").textContent = crear ? "Crear mi cuenta" : "Entrar";
     $("btn-olvido").classList.toggle("oculto", crear);
     $("error-entrada").textContent = "";
     $("ok-entrada").textContent = "";
@@ -78,13 +82,15 @@
         }
         $("clave").value = ""; $("clave2").value = "";
         await iniciar();
+        // 28/10/2026: primera vez, recién creada la cuenta con el código, se ofrece la huella (solo celular).
+        if (window.DCHuella && datos) DCHuella.ofrecer();
       } else {
         const { error } = await sb.auth.signInWithPassword({ email: correo, password: clave });
         if (error) { $("error-entrada").textContent = traducir(error.message); return; }
         $("clave").value = "";
         await iniciar();
-        // 26/10/2026: después de entrar con contraseña se ofrece «Entrar con huella» (una vez por equipo).
-        if (window.DCHuella) DCHuella.ofrecer();
+        // 28/10/2026: después de entrar con contraseña se ofrece «Entrar con huella» (solo celular, una vez).
+        if (window.DCHuella && datos) DCHuella.ofrecer();
       }
     } finally {
       $("btn-entrar").disabled = false;
@@ -142,6 +148,10 @@
       return;
     }
     datos = data;
+    if (window.DCHuella && datos.cliente) {
+      const nom = [String(datos.cliente.nombres || "").split(" ")[0], String(datos.cliente.apellidos || "").split(" ")[0]].join(" ").trim();
+      DCHuella.recordar(nom, s.session.user.email);
+    }
     cargadoEn = Date.now();
     mostrar("app");
     pintar();
@@ -221,7 +231,7 @@
         if (debe > 0 && d !== null && d >= 0 && (prox === null || d < prox.d)) prox = { d, q, debe };
       }));
       sup = '<div class="msj-card"><b>Proceso ' + esc(e.numero) + (e.servicio ? " · " + esc(e.servicio) : "") + "</b>" +
-        (prox ? "<span>Próxima cuota: " + esc(L.fechaCorta(prox.q.vencimiento)) + " · " + esc(pesos.format(prox.debe)) + "</span>" : "") + "</div>";
+        (prox ? "<span>Próxima cuota: " + esc(L.fechaCorta(prox.q.vencimiento)) + " · " + plata(prox.debe, true) + "</span>" : "") + "</div>";
     }
     const quien = [...mensajes].reverse().find(m => m.de === "despacho");
     let h = '<div class="chat">' + sup +
@@ -318,22 +328,28 @@
     else h = '<button type="button" data-push="activar">Activar avisos en este celular</button>';
     return tarjeta("Avisos al celular", "", '<p class="gris" style="margin:0 0 10px">' + esc(como) + "</p>" + h + '<p id="push-msg" class="gris"></p>');
   }
+  // Activar o quitar los avisos (desde la tarjeta o desde Configuración). Devuelve el error, si hubo.
+  async function avisosActivar() {
+    const P = window.DC_PUSH;
+    const { data: k } = await sb.rpc("push_clave_publica_transaccional", { datos: {} });
+    await P.activar((k && k.clave) || "", "../sw.js", "../");
+    if (!P.resultado) return P.error || "No se pudo activar.";
+    const { error } = await sb.rpc("push_suscribir_transaccional", { datos: JSON.parse(P.resultado) });
+    if (error) { try { localStorage.removeItem("dc-push-activo"); } catch (e) {} return "No se pudo activar: " + error.message; }
+    return "";
+  }
+  async function avisosQuitar() {
+    const P = window.DC_PUSH;
+    await P.desactivar();
+    if (P.resultado && P.resultado !== "{}") await sb.rpc("push_quitar_transaccional", { datos: JSON.parse(P.resultado) });
+    return "";
+  }
   document.addEventListener("click", async ev => {
     const b = ev.target.closest && ev.target.closest("[data-push]");
     if (!b || !window.DC_PUSH) return;
-    const P = window.DC_PUSH, msg = () => $("push-msg");
     b.disabled = true;
-    if (b.dataset.push === "activar") {
-      const { data: k } = await sb.rpc("push_clave_publica_transaccional", { datos: {} });
-      await P.activar((k && k.clave) || "", "../sw.js", "../");
-      if (P.resultado) {
-        const { error } = await sb.rpc("push_suscribir_transaccional", { datos: JSON.parse(P.resultado) });
-        if (error) { try { localStorage.removeItem("dc-push-activo"); } catch (e) {} msg().textContent = "No se pudo activar: " + error.message; b.disabled = false; return; }
-      } else { msg().textContent = P.error; b.disabled = false; return; }
-    } else {
-      await P.desactivar();
-      if (P.resultado && P.resultado !== "{}") await sb.rpc("push_quitar_transaccional", { datos: JSON.parse(P.resultado) });
-    }
+    const error = b.dataset.push === "activar" ? await avisosActivar() : await avisosQuitar();
+    if (error) { $("push-msg").textContent = error; b.disabled = false; return; }
     pintar();
   });
 
@@ -372,7 +388,7 @@
     }));
     // Saldo en grande con la barra de lo pagado (Modelo B / C aprobado por Darío).
     const avance = total > 0 ? Math.round((pagadoTotal / total) * 100) : 0;
-    let h = '<div class="saldo"><span class="lbl">Saldo pendiente</span><span class="cifra">' + esc(pesos.format(saldo)) + "</span>" +
+    let h = '<div class="saldo"><span class="lbl">Saldo pendiente</span><span class="cifra">' + plata(saldo) + "</span>" +
       '<div class="barra" role="progressbar" aria-valuenow="' + avance + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + avance + '%"></i></div>' +
       '<div class="pie"><span>Ha pagado ' + pagadas + " de " + cuotas + " cuotas (" + avance + " %)</span><span>" +
       (vencidas ? vencidas + (vencidas === 1 ? " cuota vencida" : " cuotas vencidas") : proxima ? "Próxima cuota " + esc(L.fechaCorta(proxima.q.vencimiento)) : "Al día") + "</span></div></div>";
@@ -382,11 +398,11 @@
         const d = L.diasHasta(q.vencimiento);
         const color = debe <= 0 ? "v" : d !== null && d < 0 ? "r" : d !== null && d <= 5 ? "a" : "z";
         const estado = debe <= 0 ? "Pagada" : d !== null && d < 0 ? "Vencida" : num(q.pagado) > 0 ? "Pago parcial" : "Pendiente";
-        return item(color, "Cuota " + esc(q.numero) + ' · <span class="monto">' + esc(pesos.format(num(q.valor))) + "</span>",
-          esc(estado) + " · vence " + esc(L.fechaCorta(q.vencimiento)) + (num(q.pagado) > 0 && debe > 0 ? " · pagado " + esc(pesos.format(num(q.pagado))) : ""));
+        return item(color, "Cuota " + esc(q.numero) + " · " + plata(q.valor),
+          esc(estado) + " · vence " + esc(L.fechaCorta(q.vencimiento)) + (num(q.pagado) > 0 && debe > 0 ? " · pagado " + plata(q.pagado, true) : ""));
       }).join("");
-      h += tarjeta("Contrato " + esc(k.numero), "Honorarios " + esc(pesos.format(num(k.honorarios))), cuotas || vacio("Sin cuotas."));
-      const pagos = (k.pagos || []).map(p => item("v", '<span class="monto">' + esc(pesos.format(num(p.monto))) + "</span> · " + esc(L.fechaCorta(p.fecha)),
+      h += tarjeta("Contrato " + esc(k.numero), "Honorarios " + plata(k.honorarios, true), cuotas || vacio("Sin cuotas."));
+      const pagos = (k.pagos || []).map(p => item("v", plata(p.monto) + " · " + esc(L.fechaCorta(p.fecha)),
         (p.recibo ? "Recibo " + esc(p.recibo) + " · " : "") + esc(p.metodo || p.concepto || ""))).join("");
       h += tarjeta("Pagos recibidos", (k.pagos || []).length, pagos || vacio("Todavía no hay pagos registrados."));
     });
@@ -406,7 +422,20 @@
 
   // Recuperar contraseña: ver ../clave.js.
   const CLAVE = window.DC_CLAVE;
-  CLAVE.preparar(sb, { alTerminar: () => cargar() });
+  CLAVE.preparar(sb, { alTerminar: () => { $("volver-clave").classList.add("oculto"); cargar(); } });
+
+  // ---------- Configuración (engranaje de arriba) ----------
+  if (window.DCAjustes) DCAjustes.montar({
+    app: "cliente",
+    avisos: { estado: () => (window.DC_PUSH ? DC_PUSH.estado() : "no"), activar: avisosActivar, quitar: avisosQuitar },
+    cambiarClave() {
+      $("volver-clave").classList.remove("oculto");
+      $("error-nueva-clave").textContent = "";
+      mostrar("nueva-clave");
+    },
+    alCerrar() { if (datos) pintar(); }
+  });
+  $("volver-clave").addEventListener("click", ev => { ev.preventDefault(); $("volver-clave").classList.add("oculto"); mostrar("app"); });
   async function iniciar() {
     const { data } = await sb.auth.getSession();
     if (CLAVE.enRecuperacion && data.session) { mostrar("nueva-clave"); return; }

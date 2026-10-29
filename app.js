@@ -63,12 +63,13 @@
     }
     $("clave").value = "";
     await iniciar();
-    // 26/10/2026: después de entrar con contraseña se ofrece «Entrar con huella» (una vez por equipo).
+    // 28/10/2026: después de entrar con contraseña se ofrece «Entrar con huella» (solo celular, una vez).
     if (window.DCHuella) DCHuella.ofrecer();
   });
   if (window.DCHuella) DCHuella.montar(sb, "movil", iniciar);
   $("btn-salir").addEventListener("click", async () => {
     await sb.auth.signOut();
+    try { localStorage.removeItem("dc-movil-ultimo-uso"); } catch (e) {}
     datos = null;
     mostrarEntrada("");
   });
@@ -104,11 +105,13 @@
         mostrarEntrada("Su cuenta no está activa. Pídale al administrador que la active.");
         return;
       }
+      if (window.DCHuella) DCHuella.recordar(perfil.nombre, s.session.user.email);
       datos = { perfil, clientes, expedientes, vencimientos, terminos, eventos, tareas, agenda, vigilancia, clientesPorId: {}, expedientesPorId: {} };
       clientes.forEach(c => (datos.clientesPorId[c.id] = c));
       expedientes.forEach(e => (datos.expedientesPorId[e.id] = e));
       mensajes.lista = filasMsj;
       cargadoEn = Date.now();
+      anotado = 0; anotarUso();
       mostrarApp();
       pintar();
     } catch (e) {
@@ -231,22 +234,28 @@
     else h = '<button type="button" data-push="activar">Activar avisos en este celular</button>';
     return tarjeta("Avisos al celular", "", '<p class="gris" style="margin:0 0 10px">' + esc(como) + "</p>" + h + '<p id="push-msg" class="gris"></p>');
   }
+  // Activar o quitar los avisos (desde la tarjeta de Inicio o desde Configuración). Devuelve el error, si hubo.
+  async function avisosActivar() {
+    const P = window.DC_PUSH;
+    const { data: k } = await sb.rpc("push_clave_publica_transaccional", { datos: {} });
+    await P.activar((k && k.clave) || "", "sw.js", "./");
+    if (!P.resultado) return P.error || "No se pudo activar.";
+    const { error } = await sb.rpc("push_suscribir_transaccional", { datos: JSON.parse(P.resultado) });
+    if (error) { try { localStorage.removeItem("dc-push-activo"); } catch (e) {} return "No se pudo activar: " + error.message; }
+    return "";
+  }
+  async function avisosQuitar() {
+    const P = window.DC_PUSH;
+    await P.desactivar();
+    if (P.resultado && P.resultado !== "{}") await sb.rpc("push_quitar_transaccional", { datos: JSON.parse(P.resultado) });
+    return "";
+  }
   document.addEventListener("click", async ev => {
     const b = ev.target.closest && ev.target.closest("[data-push]");
     if (!b || !window.DC_PUSH) return;
-    const P = window.DC_PUSH, msg = () => $("push-msg");
     b.disabled = true;
-    if (b.dataset.push === "activar") {
-      const { data: k } = await sb.rpc("push_clave_publica_transaccional", { datos: {} });
-      await P.activar((k && k.clave) || "", "sw.js", "./");
-      if (P.resultado) {
-        const { error } = await sb.rpc("push_suscribir_transaccional", { datos: JSON.parse(P.resultado) });
-        if (error) { try { localStorage.removeItem("dc-push-activo"); } catch (e) {} msg().textContent = "No se pudo activar: " + error.message; b.disabled = false; return; }
-      } else { msg().textContent = P.error; b.disabled = false; return; }
-    } else {
-      await P.desactivar();
-      if (P.resultado && P.resultado !== "{}") await sb.rpc("push_quitar_transaccional", { datos: JSON.parse(P.resultado) });
-    }
+    const error = b.dataset.push === "activar" ? await avisosActivar() : await avisosQuitar();
+    if (error) { $("push-msg").textContent = error; b.disabled = false; return; }
     pintar();
   });
 
@@ -371,14 +380,63 @@
   });
   // Al volver a la app después de un rato, se actualiza sola.
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && datos && Date.now() - cargadoEn > 120000) cargar();
+    if (document.visibilityState === "visible" && datos && !inactivo() && Date.now() - cargadoEn > 120000) cargar();
   });
 
   // Recuperar contraseña: ver clave.js.
   const CLAVE = window.DC_CLAVE;
-  CLAVE.preparar(sb, { alTerminar: () => cargar() });
+  CLAVE.preparar(sb, { alTerminar: () => { $("volver-clave").classList.add("oculto"); cargar(); } });
+
+  // ---------- Configuración (engranaje de arriba) ----------
+  if (window.DCAjustes) DCAjustes.montar({
+    app: "movil",
+    avisos: { estado: () => (window.DC_PUSH ? DC_PUSH.estado() : "no"), activar: avisosActivar, quitar: avisosQuitar },
+    cambiarClave() {
+      $("app").classList.add("oculto");
+      $("volver-clave").classList.remove("oculto");
+      $("error-nueva-clave").textContent = "";
+      $("nueva-clave").classList.remove("oculto");
+    },
+    alCerrar() { if (datos) pintar(); }
+  });
+  $("volver-clave").addEventListener("click", ev => { ev.preventDefault(); $("volver-clave").classList.add("oculto"); mostrarApp(); });
+
+  // ---------- Cerrar la sesión si no se usa (Configuración › Seguridad; 10 minutos por defecto) ----------
+  const ULTIMO = "dc-movil-ultimo-uso";
+  let anotado = 0;
+  function anotarUso() {
+    const ahora = Date.now();
+    if (ahora - anotado < 15000) return;
+    anotado = ahora;
+    try { localStorage.setItem(ULTIMO, String(ahora)); } catch (e) {}
+  }
+  function inactivo() {
+    let u = 0;
+    try { u = Number(localStorage.getItem(ULTIMO)) || 0; } catch (e) {}
+    const min = window.DCAjustes ? DCAjustes.minutosInactividad() : 10;
+    return u > 0 && Date.now() - u > min * 60000;
+  }
+  async function revisarInactividad() {
+    if (!datos || !inactivo()) return;
+    await sb.auth.signOut();
+    try { localStorage.removeItem(ULTIMO); } catch (e) {}
+    datos = null;
+    if (window.DCAjustes) DCAjustes.cerrar();
+    mostrarEntrada("Cerramos la sesión porque no la usó por un rato.");
+  }
+  ["pointerdown", "keydown", "scroll"].forEach(t => document.addEventListener(t, () => { if (datos && !inactivo()) anotarUso(); }, { capture: true, passive: true }));
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") revisarInactividad(); });
+  setInterval(revisarInactividad, 30000);
+
   async function iniciar() {
     const { data } = await sb.auth.getSession();
+    // Al abrir la app después de mucho rato sin usarla, se pide entrar de nuevo (con la huella o la contraseña).
+    if (data.session && !CLAVE.enRecuperacion && inactivo()) {
+      await sb.auth.signOut();
+      try { localStorage.removeItem(ULTIMO); } catch (e) {}
+      mostrarEntrada("");
+      return;
+    }
     if (CLAVE.enRecuperacion && data.session) {
       $("app").classList.add("oculto");
       $("entrada").classList.add("oculto");

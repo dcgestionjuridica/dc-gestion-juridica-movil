@@ -278,3 +278,76 @@ html[data-tema="oscuro"] .caja-msj button { background:var(--primario); color:#0
 .acerca-ver b { display:block; color:var(--texto); font-size:14px; }
 .nav:has(button:nth-child(6)) .ic-caja { width:50px; }
 .nav:has(button:nth-child(6)) button { font-size:11px; min-width:0; padding-left:0; padding-right:0; }
+
+/* ---------- Entrar con huella estilo banco y Configuración (modelos aprobados por Darío el 28/10/2026) ---------- */
+.hb-pant { justify-content:flex-start; padding:calc(env(safe-area-inset-top) + 36px) 24px calc(env(safe-area-inset-bottom) + 26px); gap:0; }
+.hb-logo { width:72px; height:72px; border-radius:20px; box-shadow:0 0 0 3px var(--acento),0 8px 20px rgba(15,37,64,.25); }
+.hb-portal { margin-top:16px; font-size:13px; font-weight:700; color:var(--acento); letter-spacing:.06em; text-transform:uppercase; }
+.hb-hola { margin-top:26px; font-size:15px; color:var(--texto2); }
+.hb-portal + .hb-hola { margin-top:10px; }
+.hb-nom { margin-top:2px; font-size:24px; font-weight:700; color:var(--cab-txt); }
+.hb-correo { margin-top:4px; font-size:13px; color:var(--texto2); }
+.hb-circ { margin-top:58px; width:132px; height:132px; border-radius:50%; border:0; background:#0f2540; color:#ffe08f; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 12px var(--tonal),0 0 0 24px rgba(214,227,255,.45),0 14px 30px rgba(15,37,64,.3); flex:none; }
+html[data-tema="oscuro"] .hb-circ { background:#13294a; box-shadow:0 0 0 12px rgba(217,181,74,.18),0 0 0 24px rgba(217,181,74,.07),0 14px 30px rgba(0,0,0,.4); }
+.hb-circ svg { width:70px; height:70px; }
+.hb-circ:disabled { opacity:.7; }
+.hb-toque { margin-top:34px; font-size:16px; font-weight:600; color:var(--cab-txt); }
+.hb-toque2 { margin-top:4px; font-size:13px; color:var(--texto2); }
+.hb-err { margin-top:10px; min-height:18px; font-size:13px; color:var(--rojo-txt); }
+.hb-esp { flex:1; min-height:20px; }
+.hb-btn2 { width:100%; max-width:360px; height:48px; border-radius:24px; border:1.5px solid var(--cab-txt); background:transparent; color:var(--cab-txt); font-weight:600; font-size:15px; flex:none; }
+.hb-cambio { margin-top:14px; font-size:13px; color:var(--texto2); background:none; border:0; }
+.hb-cambio b { color:var(--cab-txt); }
+.hb-prim { width:100%; max-width:360px; height:46px; border-radius:23px; border:0; background:#0f2540; color:#fff; font-weight:700; font-size:15px; flex:none; }
+html[data-tema="oscuro"] .hb-prim { background:var(--primario); color:#0b1626; }
+.hb-prim:disabled { opacity:.6; }
+.hb-link { margin-top:14px; background:none; border:0; font-size:14px; font-weight:600; color:var(--cab-txt); }
+.hb-nota { margin-top:14px; font-size:12.5px; color:var(--texto2); }
+.hb-velo { position:fixed; inset:0; z-index:9000; overflow:auto; }
+.hb-oferta .hb-logo { width:60px; height:60px; }
+.hb-oferta .hb-circ { margin-top:44px; width:110px; height:110px; box-shadow:0 0 0 10px var(--tonal),0 0 0 20px rgba(214,227,255,.45); pointer-events:none; }
+.hb-oferta .hb-circ svg { width:58px; height:58px; }
+.hb-oferta h2 { margin-top:44px; font-size:19px; white-space:nowrap; color:var(--cab-txt); }
+.hb-oferta p, .hb-listo p { margin-top:6px; max-width:340px; font-size:13.5px; line-height:1.45; color:var(--texto2); }
+.hb-ok { margin-top:70px; width:110px; height:110px; border-radius:50%; background:var(--verde); color:var(--verde-txt); display:flex; align-items:center; justify-content:center; flex:none; }
+.hb-ok svg { width:58px; height:58px; }
+.hb-listo h2 { margin-top:28px; font-size:22px; color:var(--cab-txt); }
+
+.aj { position:fixed; inset:0; z-index:8000; background:var(--fondo); overflow:auto; padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 24px); }
+html[data-tema="oscuro"] .aj { background:radial-gradient(120% 60% at 50% 0%,#1d3a63 0%,#0b1626 55%,#070e19 100%); }
+.aj-cab { display:flex; align-items:center; gap:12px; padding:0 0 12px; }
+.aj-atras { width:36px; height:36px; border-radius:50%; border:0; background:var(--sup2); color:var(--cab-txt); font-size:22px; line-height:1; display:flex; align-items:center; justify-content:center; }
+.aj-cab b { font-size:20px; color:var(--cab-txt); }
+.aj-sec { font-size:12px; font-weight:700; color:var(--acento); letter-spacing:.06em; text-transform:uppercase; margin:12px 4px 6px; }
+.aj-grupo { background:var(--sup); border:1px solid var(--linea); border-radius:18px; overflow:hidden; }
+.aj-op { display:flex; align-items:center; gap:12px; padding:11px 14px; border-top:1px solid var(--sup2); width:100%; background:none; border-left:0; border-right:0; border-bottom:0; text-align:left; color:inherit; font:inherit; }
+.aj-grupo > .aj-op:first-child { border-top:0; }
+.aj-ic { width:34px; height:34px; border-radius:10px; background:var(--tonal); color:var(--tonal-txt); display:flex; align-items:center; justify-content:center; flex:none; }
+.aj-ic svg { width:20px; height:20px; }
+.aj-tx { flex:1; min-width:0; }
+.aj-tx b { display:block; font-size:14.5px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.aj-tx small { display:block; font-size:12px; color:var(--texto2); margin-top:1px; }
+.aj-sw { width:44px; height:26px; border-radius:13px; background:#c3c7cf; position:relative; flex:none; border:0; transition:background .15s; }
+.aj-sw::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); transition:left .15s; }
+.aj-sw.on { background:var(--primario); }
+.aj-sw.on::after { left:21px; }
+.aj-sw:disabled { opacity:.5; }
+.aj-seg { display:flex; background:var(--sup2); border-radius:12px; padding:3px; margin:0 14px 12px; }
+.aj-seg button { flex:1; border:0; background:none; font-size:12.5px; font-weight:600; color:var(--texto2); padding:7px 0; border-radius:9px; white-space:nowrap; }
+.aj-seg button.on { background:var(--sup); color:var(--cab-txt); box-shadow:0 1px 2px rgba(15,37,64,.15); }
+html[data-tema="oscuro"] .aj-seg button.on { background:rgba(255,255,255,.14); }
+.aj-flecha { color:#93a5c0; font-size:18px; }
+.aj-ver { text-align:center; font-size:11.5px; color:#93a5c0; margin-top:8px; }
+.aj-msg { font-size:12px; color:var(--rojo-txt); margin:6px 4px 0; min-height:0; }
+.aj-lista { background:var(--sup); border:1px solid var(--linea); border-radius:14px; margin:0 14px 12px; overflow:hidden; }
+.aj-lista button { display:block; width:100%; text-align:left; padding:11px 14px; border:0; border-top:1px solid var(--sup2); background:none; color:var(--texto); font-size:14px; }
+.aj-lista button:first-child { border-top:0; }
+.aj-lista button.on { font-weight:700; color:var(--cab-txt); }
+.aj-lista button.on::after { content:" ✓"; color:var(--acento); }
+
+/* Ocultar valores (portal del cliente): los montos salen como $ •••• hasta tocarlos. */
+.monto .mo { display:none; }
+html.ocultar-valores .monto:not(.ver) .mv { display:none; }
+html.ocultar-valores .monto:not(.ver) .mo { display:inline; }
+html.ocultar-valores .monto { cursor:pointer; }
+.monto.suave { font-weight:inherit; }
