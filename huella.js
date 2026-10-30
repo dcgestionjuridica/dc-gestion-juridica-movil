@@ -32,15 +32,40 @@
     return m ? m[1] + "•••" + m[2] : "";
   }
 
+  // 30/10/2026: si el servidor no responde en 15 segundos se avisa, en vez de quedarse pegado.
   async function llamar(cuerpo, token) {
     const cfg = window.DC_CONFIG || {};
     const h = { "Content-Type": "application/json", apikey: cfg.clavePublica || "" };
     if (token) h.Authorization = "Bearer " + token;
-    const r = await fetch((cfg.url || "") + "/functions/v1/huella", { method: "POST", headers: h, body: JSON.stringify(cuerpo) });
-    const j = await r.json().catch(() => ({ error: "Sin respuesta del servidor." }));
-    j.estado = r.status;
-    return j;
+    const corte = window.AbortController ? new AbortController() : null;
+    const reloj = corte ? setTimeout(() => corte.abort(), 15000) : 0;
+    try {
+      const r = await fetch((cfg.url || "") + "/functions/v1/huella", { method: "POST", headers: h, body: JSON.stringify(cuerpo), signal: corte ? corte.signal : undefined });
+      const j = await r.json().catch(() => ({ error: "Sin respuesta del servidor." }));
+      j.estado = r.status;
+      return j;
+    } catch (e) {
+      return { error: "La conexión está lenta. Toque otra vez la huella o entre con su contraseña.", estado: 0 };
+    } finally { clearTimeout(reloj); }
   }
+
+  // 30/10/2026: el reto se pide ANTES de que la persona toque la huella (al mostrar la pantalla). Así, al tocar,
+  // el celular muestra la huella al instante, sin esperar a internet. Además, el iPhone solo deja pedir la
+  // huella justo después del toque: si antes había que esperar al servidor, a veces no salía nada.
+  const RETO_VIGENTE = 4 * 60 * 1000; // el servidor lo acepta 5 minutos
+  let reto = null, pidiendoReto = null;
+  function retoFresco() { return reto && Date.now() - reto.en < RETO_VIGENTE ? reto.op : null; }
+  function prepararReto() {
+    if (retoFresco() || pidiendoReto) return pidiendoReto;
+    pidiendoReto = llamar({ accion: "entrada_opciones" }).then(op => {
+      if (!op.error && op.challenge) reto = { op, en: Date.now() };
+      return op;
+    }).finally(() => { pidiendoReto = null; });
+    return pidiendoReto;
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && pantalla && !pantalla.classList.contains("oculto")) prepararReto();
+  });
 
   // ---------- Pantalla de entrada estilo banco ----------
   function crearPantalla() {
@@ -91,25 +116,38 @@
     }
     entrada.classList.toggle("oculto", !enEntrada || usar);
     pantalla.classList.toggle("oculto", !usar);
+    if (usar) prepararReto();
     api.activa = activaAqui() && await disponible();
   }
 
+  let entrando = false;
   async function entrar(boton) {
+    if (entrando) return;
+    entrando = true;
     const err = pantalla.querySelector(".hb-err");
+    const toque = pantalla.querySelector(".hb-toque");
     err.textContent = "";
     boton.disabled = true;
     try {
-      const op = await llamar({ accion: "entrada_opciones" });
-      if (op.error) { err.textContent = op.error; return; }
+      // Con el reto ya listo, la huella se pide en el mismo toque, sin esperar nada.
+      let op = retoFresco();
+      reto = null; // cada reto sirve una sola vez
+      if (!op) {
+        const r0 = await prepararReto();
+        op = retoFresco(); reto = null;
+        if (!op) { err.textContent = (r0 && r0.error) || "No se pudo preparar la huella. Inténtelo de nuevo."; return; }
+      }
       const guardada = leer(clave());
       let cred;
       try {
-        cred = await navigator.credentials.get({ publicKey: { challenge: deb(op.challenge), rpId: op.rpId, timeout: op.timeout, userVerification: "required",
-          allowCredentials: guardada.length > 1 ? [{ id: deb(guardada), type: "public-key", transports: ["internal", "hybrid"] }] : [] } });
+        cred = await navigator.credentials.get({ publicKey: { challenge: deb(op.challenge), rpId: op.rpId, timeout: 60000, userVerification: "required",
+          allowCredentials: guardada.length > 1 ? [{ id: deb(guardada), type: "public-key", transports: ["internal"] }] : [] } });
       } catch (e) {
         if (!(e && (e.name === "NotAllowedError" || e.name === "AbortError"))) err.textContent = "No se pudo usar la huella. Entre con su contraseña.";
         return;
       }
+      pantalla.classList.add("hb-entrando");
+      toque.textContent = "Entrando…";
       const r = cred.response;
       const v = await llamar({ accion: "entrada_verificar", respuesta: { id: cred.id, rawId: b64(cred.rawId), type: cred.type, clientExtensionResults: {}, response: {
         clientDataJSON: b64(r.clientDataJSON), authenticatorData: b64(r.authenticatorData), signature: b64(r.signature), userHandle: r.userHandle ? b64(r.userHandle) : undefined } } });
@@ -123,7 +161,14 @@
       const { error: e2 } = await sb.auth.setSession({ access_token: v.access_token, refresh_token: v.refresh_token });
       if (e2) { err.textContent = "No se pudo abrir la sesión. Entre con su contraseña."; return; }
       await alEntrar();
-    } finally { boton.disabled = false; }
+    } finally {
+      entrando = false;
+      boton.disabled = false;
+      pantalla.classList.remove("hb-entrando");
+      toque.textContent = "Toque para entrar con su huella";
+      // Se deja listo el reto para la próxima vez (si la pantalla de la huella sigue a la vista).
+      if (!pantalla.classList.contains("oculto")) prepararReto();
+    }
   }
 
   // ---------- Activar ----------

@@ -291,6 +291,8 @@ html[data-tema="oscuro"] .caja-msj button { background:var(--primario); color:#0
 html[data-tema="oscuro"] .hb-circ { background:#13294a; box-shadow:0 0 0 12px rgba(217,181,74,.18),0 0 0 24px rgba(217,181,74,.07),0 14px 30px rgba(0,0,0,.4); }
 .hb-circ svg { width:70px; height:70px; }
 .hb-circ:disabled { opacity:.7; }
+.hb-entrando .hb-circ { animation:hb-latido 1s ease-in-out infinite; opacity:1; }
+@keyframes hb-latido { 50% { transform:scale(.94); } }
 .hb-toque { margin-top:34px; font-size:16px; font-weight:600; color:var(--cab-txt); }
 .hb-toque2 { margin-top:4px; font-size:13px; color:var(--texto2); }
 .hb-err { margin-top:10px; min-height:18px; font-size:13px; color:var(--rojo-txt); }
