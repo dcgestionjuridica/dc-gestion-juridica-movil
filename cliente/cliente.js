@@ -321,7 +321,8 @@
     const P = window.DC_PUSH, est = P ? P.estado() : "no";
     const como = "¿Cómo funciona? Le llega un aviso al celular cuando una cuota está por vencer, cuando hay una novedad en su proceso o cuando el despacho le envía un mensaje importante.";
     let h;
-    if (est === "activo") h = item("a", "Avisos activados en este celular", "Puede quitarlos cuando quiera.") + '<button type="button" class="sec" data-push="quitar">Quitar avisos</button>';
+    // 30/10/2026 (Darío): con los avisos ya activados la tarjeta no sale; se apagan desde Configuración.
+    if (est === "activo") return "";
     else if (est === "iphone") h = vacio("En iPhone: toque el botón Compartir y luego «Agregar a inicio». Abra el portal desde ese ícono y aquí podrá activar los avisos (iOS 16.4 o más nuevo).");
     else if (est === "denegado") h = vacio("Los avisos están bloqueados para esta página. Actívelos en los ajustes del navegador y vuelva a intentarlo.");
     else if (est === "no") h = vacio("Este navegador no admite avisos.");
