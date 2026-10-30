@@ -457,3 +457,18 @@ html[data-tema="oscuro"] .hoja-a { background:#13243d; }
 .hoja-ck { margin-left:auto; color:var(--acento); font-size:18px; font-weight:800; }
 @keyframes hoja-a { from { transform:translateY(40px); opacity:0; } }
 @keyframes hoja-velo { from { opacity:0; } }
+
+/* 30/10/2026 (Darío): «Escribir a un cliente» desde la app del abogado. */
+.nuevo-msj { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-bottom:12px; border:0; border-radius:16px; padding:13px; font:inherit; font-size:15px; font-weight:800;
+  background:linear-gradient(135deg,#e7c565,#b8901c); color:#0f2540; box-shadow:0 6px 16px rgba(184,144,28,.3); cursor:pointer; }
+.hoja-buscar { margin:0 0 6px; }
+.hoja-lista { max-height:46vh; overflow-y:auto; }
+
+/* 30/10/2026 (Darío): encabezado más armónico; el saludo y la línea de abajo van en un solo renglón y los botones no bajan. */
+.cab .t { gap:10px; }
+.cab .t .crece { min-width:0; }
+.cab .t b { font-size:18px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cab .t small { font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cab .t small.dos { line-height:1.1; margin-top:1px; }
+.cab .cab-btn { width:40px; height:40px; margin-left:2px; border-radius:13px; flex:none; }
+.cab .cab-btn svg { width:22px; height:22px; }

@@ -11,7 +11,7 @@
   let cargadoEn = 0;
   let vista = "inicio";
   let pestana = "vencimientos";
-  let mensajes = { lista: [], abierto: null, hilo: [], error: "", filtro: "todos" };
+  let mensajes = { lista: [], abierto: null, hilo: [], error: "", filtro: "todos", eligiendo: false, clientesPortal: null, buscar: "" };
 
   function esc(t) {
     return String(t === null || t === undefined ? "" : t)
@@ -136,7 +136,7 @@
       pendientes: ["Pendientes", "Lo mismo que en el programa del PC"],
       agenda: ["Agenda", "Próximos 30 días"],
       procesos: ["Procesos", "Radicados vigilados en la Rama Judicial"],
-      mensajes: ["Mensajes de clientes", "Lo que sus clientes le escriben desde el celular"],
+      mensajes: ["Mensajes de clientes", "Desde el portal del cliente"],
       acerca: ["Acerca de", "DC Gestión Jurídica"]
     };
     const q = norm($("buscar").value.trim());
@@ -168,17 +168,20 @@
       let h = '<div class="chat"><button type="button" class="chat-volver" data-msj="volver">‹ Volver a los mensajes</button>' +
         '<div class="msj-cab"><span class="msj-av">' + esc(iniciales(f.cliente)) + '</span><div class="crece"><b>' + esc(f.cliente) + "</b>" + (f.expediente ? "<span>Proceso " + esc(f.expediente) + "</span>" : "<span>Portal del cliente</span>") + "</div></div>" +
         '<div id="hilo-abogado" class="hilo">';
+      if (!mensajes.hilo.length && !mensajes.error) h += '<div class="msj-aviso">Todavía no hay mensajes con este cliente. Escríbale aquí: lo verá en su portal y le llegará un aviso al celular.</div>';
       mensajes.hilo.forEach(m => {
         h += '<div class="msj ' + (m.de === "cliente" ? "abo" : "cli") + '">' + esc(m.texto).replace(/\n/g, "<br>") +
           '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div>" +
           (m.de === "cliente" && m.para ? '<span class="para-pill' + (m.para_mi ? " mi" : "") + '">' + (m.para_mi ? "Para ti" : "Para: " + esc(m.para)) + "</span>" : "") + "</div>";
       });
-      h += '</div><form id="form-resp" class="caja-msj"><textarea id="txt-resp" rows="1" maxlength="2000" placeholder="Escriba su respuesta…" aria-label="Respuesta"></textarea>' +
+      h += '</div><form id="form-resp" class="caja-msj"><textarea id="txt-resp" rows="1" maxlength="2000" placeholder="' + (mensajes.hilo.length ? "Escriba su respuesta…" : "Escriba su mensaje…") + '" aria-label="Respuesta"></textarea>' +
         '<button type="submit" id="env-resp" aria-label="Responder">➤</button></form><p id="err-resp" class="gris" style="margin:4px 14px">' + esc(mensajes.error) + "</p></div>";
       return h;
     }
     const filas = mensajes.lista || [];
-    if (!filas.length) return tarjeta("Mensajes de clientes", "", vacio("Todavía ningún cliente ha escrito desde su portal."));
+    // 30/10/2026 (Darío): el despacho también puede escribirle primero a un cliente que tenga el portal.
+    const nuevo = '<button type="button" class="nuevo-msj" data-nuevo="abrir">✏️ Escribir a un cliente</button>';
+    if (!filas.length) return nuevo + tarjeta("Mensajes de clientes", "", vacio("Todavía no hay conversaciones con clientes.")) + hojaClientes();
     const paraMi = filas.filter(f => f.para_mi && Number(f.sin_leer) > 0).length;
     const fil = mensajes.filtro === "mi" ? filas.filter(f => f.para_mi) : mensajes.filtro === "resp" ? filas.filter(f => f.por_responder) : filas;
     const tabs = '<div class="tabs-msj"><button type="button" class="tab-msj' + (mensajes.filtro === "todos" ? " on" : "") + '" data-filtro="todos">Todos</button>' +
@@ -186,12 +189,24 @@
       '<button type="button" class="tab-msj' + (mensajes.filtro === "resp" ? " on" : "") + '" data-filtro="resp">Sin responder</button></div>';
     // 30/10/2026 (modelo aprobado): lista estilo chat con iniciales, hora, vista previa y estado (Nuevo, Por responder, Respondido).
     const estado = f => Number(f.sin_leer) > 0 ? '<span class="est-msj nuevo">Nuevo</span>' : f.por_responder ? '<span class="est-msj resp">Por responder</span>' : '<span class="est-msj ok">✓ Respondido</span>';
-    return tabs + tarjeta("Mensajes de clientes", filas.filter(f => f.por_responder).length + " por responder", fil.length ? fil.map(f =>
+    return nuevo + tabs + tarjeta("Mensajes de clientes", filas.filter(f => f.por_responder).length + " por responder", fil.length ? fil.map(f =>
       '<div class="fila-msj' + (Number(f.sin_leer) > 0 ? " sin-leer" : "") + (f.para_mi ? " para-mi" : "") + '" data-msj="abrir" data-cliente="' + esc(f.cliente_id) + '">' +
       '<span class="msj-av">' + esc(iniciales(f.cliente)) + (Number(f.sin_leer) > 0 ? '<i class="msj-punto"></i>' : "") + "</span>" +
       '<div class="crece"><div class="msj-l1"><b>' + esc(f.cliente) + '</b><time>' + esc(horaMsj(f.ultimo_en)) + "</time></div>" +
       '<div class="msj-prev">' + (f.ultimo_de === "despacho" ? "Usted: " : "") + esc(String(f.ultimo_texto || "").slice(0, 120)) + "</div>" +
-      '<div class="msj-l3"><span class="para-pill' + (f.para_mi ? " mi" : "") + '">' + (f.para_mi ? "Para ti" : "Para: " + esc(f.para || "Todo el despacho")) + "</span>" + estado(f) + "</div></div></div>").join("") : vacio("No hay mensajes en esta pestaña."));
+      '<div class="msj-l3"><span class="para-pill' + (f.para_mi ? " mi" : "") + '">' + (f.para_mi ? "Para ti" : "Para: " + esc(f.para || "Todo el despacho")) + "</span>" + estado(f) + "</div></div></div>").join("") : vacio("No hay mensajes en esta pestaña.")) + hojaClientes();
+  }
+  // Lista para elegir a qué cliente escribirle: solo los que ya entraron al portal (allí leen el mensaje).
+  function hojaClientes() {
+    if (!mensajes.eligiendo) return "";
+    const q = norm(mensajes.buscar || "");
+    const lista = mensajes.clientesPortal;
+    const fil = (lista || []).filter(c => !q || norm(c.cliente).includes(q));
+    return '<div class="hoja-velo" data-nuevo="cerrar"></div><div class="hoja-a" role="dialog" aria-label="Escribir a un cliente"><div class="hoja-asa"></div>' +
+      '<div class="hoja-tit">¿A qué cliente le escribe?</div><p class="gris" style="margin:0 0 10px">Solo aparecen los clientes que ya entraron a su portal; allí leen el mensaje y les llega el aviso al celular.</p>' +
+      '<label class="buscar hoja-buscar"><svg class="ic" width="20" height="20"><use href="#ic-buscar"/></svg><input id="buscar-cli" type="search" placeholder="Buscar cliente" value="' + esc(mensajes.buscar || "") + '"></label>' +
+      '<div class="hoja-lista">' + (lista === null ? vacio("Cargando…") : fil.length ? fil.map(c => '<button type="button" class="hoja-opc" data-nuevo-cli="' + esc(c.cliente_id) + '"><span class="hoja-av">' + esc(iniciales(c.cliente)) +
+        '</span><span class="crece">' + esc(c.cliente) + "<small>" + esc(c.expediente ? "Proceso " + c.expediente : "Portal activo") + "</small></span></button>").join("") : vacio("No hay clientes con ese nombre en el portal.")) + "</div></div>";
   }
   const iniciales = n => String(n || "").split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join("").toUpperCase();
   async function abrirHilo(f) {
@@ -206,6 +221,24 @@
     if (data) mensajes.lista = data.filas || [];
   }
   document.addEventListener("click", async ev => {
+    const nv = ev.target.closest && ev.target.closest("[data-nuevo]");
+    if (nv && datos) {
+      mensajes.eligiendo = nv.dataset.nuevo === "abrir"; mensajes.buscar = "";
+      pintar();
+      if (mensajes.eligiendo && mensajes.clientesPortal === null) {
+        const { data, error } = await sb.rpc("mensajes_clientes_portal_transaccional", { datos: {} });
+        mensajes.clientesPortal = error ? [] : (data && data.clientes) || [];
+        pintar();
+      }
+      return;
+    }
+    const nc = ev.target.closest && ev.target.closest("[data-nuevo-cli]");
+    if (nc && datos) {
+      const c = (mensajes.clientesPortal || []).find(x => String(x.cliente_id) === nc.dataset.nuevoCli);
+      mensajes.eligiendo = false;
+      if (c) abrirHilo((mensajes.lista || []).find(x => String(x.cliente_id) === String(c.cliente_id)) || { cliente_id: c.cliente_id, cliente: c.cliente, expediente: c.expediente });
+      return;
+    }
     const fl = ev.target.closest && ev.target.closest("[data-filtro]");
     if (fl && datos) { mensajes.filtro = fl.dataset.filtro; pintar(); return; }
     const b = ev.target.closest && ev.target.closest("[data-msj]");
@@ -382,6 +415,13 @@
     pintar();
   });
   $("buscar").addEventListener("input", () => pintar());
+  document.addEventListener("input", ev => {
+    if (!ev.target || ev.target.id !== "buscar-cli") return;
+    mensajes.buscar = ev.target.value;
+    const pos = ev.target.selectionStart;
+    pintar();
+    const b = $("buscar-cli"); if (b) { b.focus(); b.setSelectionRange(pos, pos); }
+  });
 
   // 30/10/2026: deslizar el dedo a la izquierda o a la derecha pasa al módulo siguiente o al anterior.
   let toque = null;
