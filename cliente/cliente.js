@@ -218,7 +218,7 @@
     return dia + " " + hm;
   }
   // V1.4.16: a quién va dirigido el mensaje ("" = todo el despacho).
-  let abogados = [], destino = "";
+  let abogados = [], destino = "", eligiendo = false;
   const iniAbo = n => String(n || "").split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join("").toUpperCase();
   const nomAbo = id => { const a = abogados.find(x => x.id === id); return a ? a.nombre : ""; };
   function vistaMensajes() {
@@ -237,12 +237,13 @@
     // 30/10/2026 (Darío): al darle «Enviar», el cliente ve que su mensaje ya salió.
     if (recienEnviado) h += '<div class="msj-ok" role="status">✓ Mensaje enviado. Le responderemos pronto.</div>';
     h += '<div class="msj-aviso">' + esc(HORARIO) + "</div></div>" +
-      '<form id="form-msj" class="caja-msj2"><div class="dest-lab">¿A quién va dirigido?</div><div class="dest-chips">' +
-      '<button type="button" class="dest-chip' + (destino === "" ? " on" : "") + '" data-destino=""><span class="dest-av oro">★</span>Todo el despacho</button>' +
-      abogados.map((a, i) => '<button type="button" class="dest-chip' + (destino === a.id ? " on" : "") + '" data-destino="' + esc(a.id) + '"><span class="dest-av ' + (i % 2 ? "azul" : "") + '">' + esc(iniAbo(a.nombre)) + "</span>" + esc(a.nombre) + (destino === a.id ? " ✓" : "") + "</button>").join("") +
-      '</div><div class="dest-lab">Su mensaje</div><textarea id="txt-msj" rows="3" maxlength="2000" placeholder="Escriba aquí su duda…" aria-label="Escriba su mensaje"></textarea>' +
-      '<button type="submit" id="env-msj" class="dest-enviar">Enviar ' + (destino ? "a " + esc(nomAbo(destino)) : "a todo el despacho") + '</button>' +
-      '<div class="dest-nota">' + (destino ? "Todo el equipo verá su mensaje; " + esc(nomAbo(destino)) + " será quien le responda." : "Todo el equipo verá su mensaje y le responderá quien pueda.") + '</div></form><p id="err-msj" class="gris" style="margin:4px 14px"></p></div>';
+      // 30/10/2026 (modelo A aprobado por Darío): barra pequeña para escribir; «Para: …» abre la lista de a quién se envía.
+      '<form id="form-msj" class="caja-a"><button type="button" class="para-a" data-elegir="abrir">Para: ' + esc(destino ? nomAbo(destino) : "Todo el despacho") + " ▾</button>" +
+      '<div class="fila-a"><textarea id="txt-msj" rows="1" maxlength="2000" placeholder="Escriba su duda…" aria-label="Escriba su mensaje"></textarea>' +
+      '<button type="submit" id="env-msj" class="env-a" aria-label="Enviar">➤</button></div></form><p id="err-msj" class="gris" style="margin:4px 14px"></p></div>';
+    if (eligiendo) h += '<div class="hoja-velo" data-elegir="cerrar"></div><div class="hoja-a" role="dialog" aria-label="¿A quién le escribe?"><div class="hoja-asa"></div><div class="hoja-tit">¿A quién le escribe?</div>' +
+      '<button type="button" class="hoja-opc" data-destino=""><span class="hoja-av oro">★</span><span class="crece">Todo el despacho<small>Le responde quien pueda</small></span>' + (destino === "" ? '<span class="hoja-ck">✓</span>' : "") + "</button>" +
+      abogados.map((a, i) => '<button type="button" class="hoja-opc" data-destino="' + esc(a.id) + '"><span class="hoja-av' + (i % 2 ? " azul" : "") + '">' + esc(iniAbo(a.nombre)) + '</span><span class="crece">' + esc(a.nombre) + "<small>Todo el equipo lo ve; le responde esta persona</small></span>" + (destino === a.id ? '<span class="hoja-ck">✓</span>' : "") + "</button>").join("") + "</div>";
     return h;
   }
   let recienEnviado = false, relojEnviado = 0;
@@ -263,7 +264,7 @@
     if (!error && data && data.abogados) abogados = data.abogados;
   }
   async function abrirMensajes() {
-    vista = "mensajes"; sinLeer = 0; pintar();
+    vista = "mensajes"; sinLeer = 0; destino = ""; eligiendo = false; pintar();
     await Promise.all([cargarMensajes(true), cargarAbogados()]);
     pintar();
     clearInterval(sondeo);
@@ -271,8 +272,15 @@
   }
   document.addEventListener("click", ev => {
     const d = ev.target.closest && ev.target.closest("[data-destino]");
+    const el = ev.target.closest && ev.target.closest("[data-elegir]");
+    if (el && vista === "mensajes") {
+      eligiendo = el.dataset.elegir === "abrir";
+      const t = $("txt-msj") ? $("txt-msj").value : "";
+      pintar(); if ($("txt-msj")) $("txt-msj").value = t;
+      return;
+    }
     if (d && vista === "mensajes") {
-      destino = d.dataset.destino || "";
+      destino = d.dataset.destino || ""; eligiendo = false;
       const t = $("txt-msj") ? $("txt-msj").value : "";
       pintar(); if ($("txt-msj")) $("txt-msj").value = t;
       return;
