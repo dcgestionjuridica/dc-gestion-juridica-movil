@@ -208,7 +208,7 @@
   }
 
   // V1.4.11: «Tengo una duda sobre mi caso». El cliente le escribe al despacho; la conversación queda en su ficha.
-  const HORARIO = "Le respondemos en horario de oficina, de 8:00 a. m. a 5:00 p. m. Si es urgente, llámenos al 312 783 7570.";
+  const HORARIO = "Le respondemos en horario de oficina, de 8:00 a. m. a 5:00 p. m. Si es urgente, llámenos al 314 613 1086.";
   function horaMsj(iso) {
     const d = new Date(iso); if (isNaN(d)) return "";
     const hoy = new Date(), ayer = new Date(Date.now() - 86400000);
@@ -222,19 +222,9 @@
   const iniAbo = n => String(n || "").split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join("").toUpperCase();
   const nomAbo = id => { const a = abogados.find(x => x.id === id); return a ? a.nombre : ""; };
   function vistaMensajes() {
-    const e = (datos.expedientes || [])[0];
-    let sup = "";
-    if (e) {
-      let prox = null;
-      (datos.contratos || []).forEach(k => (k.cuotas || []).forEach(q => {
-        const debe = Math.max(0, num(q.valor) - num(q.pagado)); const d = L.diasHasta(q.vencimiento);
-        if (debe > 0 && d !== null && d >= 0 && (prox === null || d < prox.d)) prox = { d, q, debe };
-      }));
-      sup = '<div class="msj-card"><b>Proceso ' + esc(e.numero) + (e.servicio ? " · " + esc(e.servicio) : "") + "</b>" +
-        (prox ? "<span>Próxima cuota: " + esc(L.fechaCorta(prox.q.vencimiento)) + " · " + plata(prox.debe, true) + "</span>" : "") + "</div>";
-    }
+    // 30/10/2026 (Darío): el proceso y la próxima cuota se ven en Inicio, no aquí.
     const quien = [...mensajes].reverse().find(m => m.de === "despacho");
-    let h = '<div class="chat">' + sup +
+    let h = '<div class="chat">' +
       '<div class="msj-aviso">Conversación sobre este proceso' + (quien && quien.quien ? " · " + esc(quien.quien) : "") + "</div>" +
       '<div id="hilo" class="hilo">';
     if (!mensajes.length) h += '<div class="msj-aviso">Todavía no hay mensajes. Escríbanos su duda y le respondemos.</div>';
