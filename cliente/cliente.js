@@ -223,18 +223,20 @@
   // V1.4.16: a quién va dirigido el mensaje ("" = todo el despacho).
   let abogados = [], destino = "", eligiendo = false;
   const iniAbo = n => String(n || "").split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join("").toUpperCase();
-  const nomAbo = id => { const a = abogados.find(x => x.id === id); return a ? a.nombre : ""; };
+  // Darío (30/10/2026): todos en el despacho son abogados; su nombre va con «Abg.».
+  const abg = n => { n = String(n || "").trim(); return !n || /^(oficina|despacho|todo el despacho)$/i.test(n) || /^abg\./i.test(n) ? n : "Abg. " + n; };
+  const nomAbo = id => { const a = abogados.find(x => x.id === id); return a ? abg(a.nombre) : ""; };
   function vistaMensajes() {
     // 30/10/2026 (Darío): el proceso y la próxima cuota se ven en Inicio, no aquí.
     const quien = [...mensajes].reverse().find(m => m.de === "despacho");
     let h = '<div class="chat">' +
-      '<div class="msj-aviso">Conversación sobre este proceso' + (quien && quien.quien ? " · " + esc(quien.quien) : "") + "</div>" +
+      '<div class="msj-aviso">Conversación sobre este proceso' + (quien && quien.quien ? " · " + esc(abg(quien.quien)) : "") + "</div>" +
       '<div id="hilo" class="hilo">';
     if (!mensajes.length) h += '<div class="msj-aviso">Todavía no hay mensajes. Escríbanos su duda y le respondemos.</div>';
     mensajes.forEach(m => {
       h += '<div class="msj ' + (m.de === "cliente" ? "cli" : "abo") + '">' + esc(m.texto).replace(/\n/g, "<br>") +
-        '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div>" +
-        (m.de === "cliente" && m.para ? '<span class="para-tag">Para: ' + esc(m.para) + "</span>" : "") +
+        '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(abg(m.quien)) : "") + "</div>" +
+        (m.de === "cliente" && m.para ? '<span class="para-tag">Para: ' + esc(abg(m.para)) + "</span>" : "") +
         (m.de === "cliente" ? '<div class="enviado">✓ Enviado</div>' : "") + "</div>";
     });
     // 30/10/2026 (Darío): al darle «Enviar», el cliente ve que su mensaje ya salió.
@@ -246,7 +248,7 @@
       '<button type="submit" id="env-msj" class="env-a" aria-label="Enviar">➤</button></div></form><p id="err-msj" class="gris" style="margin:4px 14px"></p></div>';
     if (eligiendo) h += '<div class="hoja-velo" data-elegir="cerrar"></div><div class="hoja-a" role="dialog" aria-label="¿A quién le escribe?"><div class="hoja-asa"></div><div class="hoja-tit">¿A quién le escribe?</div>' +
       '<button type="button" class="hoja-opc" data-destino=""><span class="hoja-av oro">★</span><span class="crece">Todo el despacho<small>Le responde quien pueda</small></span>' + (destino === "" ? '<span class="hoja-ck">✓</span>' : "") + "</button>" +
-      abogados.map((a, i) => '<button type="button" class="hoja-opc" data-destino="' + esc(a.id) + '"><span class="hoja-av' + (i % 2 ? " azul" : "") + '">' + esc(iniAbo(a.nombre)) + '</span><span class="crece">' + esc(a.nombre) + "<small>Todo el equipo lo ve; le responde esta persona</small></span>" + (destino === a.id ? '<span class="hoja-ck">✓</span>' : "") + "</button>").join("") + "</div>";
+      abogados.map((a, i) => '<button type="button" class="hoja-opc" data-destino="' + esc(a.id) + '"><span class="hoja-av' + (i % 2 ? " azul" : "") + '">' + esc(iniAbo(a.nombre)) + '</span><span class="crece">' + esc(abg(a.nombre)) + "<small>Todo el equipo lo ve; le responde esta persona</small></span>" + (destino === a.id ? '<span class="hoja-ck">✓</span>' : "") + "</button>").join("") + "</div>";
     return h;
   }
   let recienEnviado = false, relojEnviado = 0;

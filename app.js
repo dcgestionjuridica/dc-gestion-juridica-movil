@@ -128,7 +128,7 @@
   // Darío (30/10/2026): todos en el despacho son abogados; el nombre va con «Abg.» (menos la cuenta «Oficina»).
   function conTitulo(nombre) {
     const n = String(nombre || "").trim();
-    return !n || /^oficina$/i.test(n) || /^abg\./i.test(n) ? n : "Abg. " + n;
+    return !n || /^(oficina|despacho|todo el despacho)$/i.test(n) || /^abg\./i.test(n) ? n : "Abg. " + n;
   }
 
   // ---------- Pantallas ----------
@@ -177,8 +177,8 @@
       if (!mensajes.hilo.length && !mensajes.error) h += '<div class="msj-aviso">Todavía no hay mensajes con este cliente. Escríbale aquí: lo verá en su portal y le llegará un aviso al celular.</div>';
       mensajes.hilo.forEach(m => {
         h += '<div class="msj ' + (m.de === "cliente" ? "abo" : "cli") + '">' + esc(m.texto).replace(/\n/g, "<br>") +
-          '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div>" +
-          (m.de === "cliente" && m.para ? '<span class="para-pill' + (m.para_mi ? " mi" : "") + '">' + (m.para_mi ? "Para ti" : "Para: " + esc(m.para)) + "</span>" : "") + "</div>";
+          '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(conTitulo(m.quien)) : "") + "</div>" +
+          (m.de === "cliente" && m.para ? '<span class="para-pill' + (m.para_mi ? " mi" : "") + '">' + (m.para_mi ? "Para ti" : "Para: " + esc(conTitulo(m.para))) + "</span>" : "") + "</div>";
       });
       h += '</div><form id="form-resp" class="caja-msj"><textarea id="txt-resp" rows="1" maxlength="2000" placeholder="' + (mensajes.hilo.length ? "Escriba su respuesta…" : "Escriba su mensaje…") + '" aria-label="Respuesta"></textarea>' +
         '<button type="submit" id="env-resp" aria-label="Responder">➤</button></form><p id="err-resp" class="gris" style="margin:4px 14px">' + esc(mensajes.error) + "</p></div>";
@@ -200,7 +200,7 @@
       '<span class="msj-av">' + esc(iniciales(f.cliente)) + (Number(f.sin_leer) > 0 ? '<i class="msj-punto"></i>' : "") + "</span>" +
       '<div class="crece"><div class="msj-l1"><b>' + esc(f.cliente) + '</b><time>' + esc(horaMsj(f.ultimo_en)) + "</time></div>" +
       '<div class="msj-prev">' + (f.ultimo_de === "despacho" ? "Usted: " : "") + esc(String(f.ultimo_texto || "").slice(0, 120)) + "</div>" +
-      '<div class="msj-l3"><span class="para-pill' + (f.para_mi ? " mi" : "") + '">' + (f.para_mi ? "Para ti" : "Para: " + esc(f.para || "Todo el despacho")) + "</span>" + estado(f) + "</div></div></div>").join("") : vacio("No hay mensajes en esta pestaña.")) + hojaClientes();
+      '<div class="msj-l3"><span class="para-pill' + (f.para_mi ? " mi" : "") + '">' + (f.para_mi ? "Para ti" : "Para: " + esc(conTitulo(f.para) || "Todo el despacho")) + "</span>" + estado(f) + "</div></div></div>").join("") : vacio("No hay mensajes en esta pestaña.")) + hojaClientes();
   }
   // Lista para elegir a qué cliente escribirle: solo los que ya entraron al portal (allí leen el mensaje).
   function hojaClientes() {
