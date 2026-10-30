@@ -73,7 +73,7 @@ html[data-tema="oscuro"] .tarj h3 span, html[data-tema="oscuro"] .tarj h3 a { le
 .it { display:flex; gap:12px; align-items:center; padding:8px 0; border-top:1px solid var(--linea); font-size:14px; color:var(--texto); }
 .tarj h3 + .it { border-top:0; }
 .it small { display:block; color:var(--texto2); font-size:12px; margin-top:1px; }
-.it .crece { overflow-wrap:anywhere; }
+.it .crece { overflow-wrap:break-word; }
 .pto { width:34px; height:34px; border-radius:11px; flex:none; display:grid; place-items:center; align-self:flex-start; }
 .pto svg { width:18px; height:18px; }
 .r { background:var(--rojo); color:var(--rojo-txt); } .a { background:var(--ambar); color:var(--ambar-txt); }
@@ -96,7 +96,7 @@ html[data-tema="oscuro"] .mov .it small { color:var(--texto2); }
 /* Resumen (cifras) */
 .res { display:flex; gap:8px; background:var(--tonal); color:var(--tonal-txt); border-radius:24px; padding:14px; }
 .res div { flex:1; min-width:0; background:rgba(255,255,255,.55); border-radius:14px; padding:10px 8px; }
-.res b { display:block; font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.res b { display:block; font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; overflow-wrap:break-word; }
 .res span { font-size:11.5px; opacity:.85; }
 html[data-tema="oscuro"] .res { background:linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.03)); border:1px solid rgba(217,181,74,.45); }
 html[data-tema="oscuro"] .res div { background:none; padding:4px 6px; }
@@ -105,7 +105,7 @@ html[data-tema="oscuro"] .res b { color:#fff; } html[data-tema="oscuro"] .res sp
 /* Saldo del cliente con barra de avance */
 .saldo { background:var(--tonal); color:var(--tonal-txt); border-radius:24px; padding:16px; display:flex; flex-direction:column; gap:6px; }
 .saldo .lbl { font-size:12.5px; opacity:.85; }
-.saldo .cifra { font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em; overflow-wrap:anywhere; }
+.saldo .cifra { font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em; overflow-wrap:break-word; }
 .saldo .barra { height:8px; border-radius:99px; background:rgba(15,37,64,.15); overflow:hidden; }
 .saldo .barra i { display:block; height:100%; background:var(--primario); border-radius:99px; }
 .saldo .pie { display:flex; justify-content:space-between; gap:8px; font-size:12.5px; opacity:.9; flex-wrap:wrap; }
@@ -464,11 +464,11 @@ html[data-tema="oscuro"] .hoja-a { background:#13243d; }
 .hoja-buscar { margin:0 0 6px; }
 .hoja-lista { max-height:46vh; overflow-y:auto; }
 
-/* 30/10/2026 (Darío): encabezado más armónico; el saludo y la línea de abajo van en un solo renglón y los botones no bajan. */
+/* 30/10/2026 (Darío): encabezado más armónico y los botones no bajan; el texto se ve completo, nunca con «…». */
 .cab .t { gap:10px; }
 .cab .t .crece { min-width:0; }
-.cab .t b { font-size:18px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.cab .t small { font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cab .t b { font-size:18px; line-height:1.2; overflow-wrap:break-word; }
+.cab .t small { font-size:12px; line-height:1.2; margin-top:1px; overflow-wrap:break-word; }
 .cab .t small.dos { line-height:1.1; margin-top:1px; }
 .cab .cab-btn { width:40px; height:40px; margin-left:2px; border-radius:13px; flex:none; }
 .cab .cab-btn svg { width:22px; height:22px; }

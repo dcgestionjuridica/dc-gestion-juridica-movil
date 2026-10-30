@@ -125,14 +125,20 @@
     }
   }
 
+  // Darío (30/10/2026): todos en el despacho son abogados; el nombre va con «Abg.» (menos la cuenta «Oficina»).
+  function conTitulo(nombre) {
+    const n = String(nombre || "").trim();
+    return !n || /^oficina$/i.test(n) || /^abg\./i.test(n) ? n : "Abg. " + n;
+  }
+
   // ---------- Pantallas ----------
   function pintar() {
     if (!datos) return;
     document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.vista === vista));
     const hoy = new Date();
-    const nombre = (datos.perfil.nombre || "").split(" ")[0];
+    // 30/10/2026 (Darío): en Inicio va el saludo y debajo el nombre completo de quien abrió la app.
     const encabezados = {
-      inicio: [L.saludo(hoy) + (nombre ? ", " + nombre : ""), L.fechaLarga(hoy)],
+      inicio: [L.saludo(hoy), conTitulo(datos.perfil.nombre) || L.fechaLarga(hoy)],
       pendientes: ["Pendientes", "Lo mismo que en el programa del PC"],
       agenda: ["Agenda", "Próximos 30 días"],
       procesos: ["Procesos", "Radicados vigilados en la Rama Judicial"],
