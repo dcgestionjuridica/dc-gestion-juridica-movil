@@ -62,11 +62,11 @@
       return;
     }
     $("clave").value = "";
-    await iniciar();
+    await iniciar(true);
     // 28/10/2026: después de entrar con contraseña se ofrece «Entrar con huella» (solo celular, una vez).
     if (window.DCHuella) DCHuella.ofrecer();
   });
-  if (window.DCHuella) DCHuella.montar(sb, "movil", iniciar);
+  if (window.DCHuella) DCHuella.montar(sb, "movil", () => iniciar(true));
   $("btn-salir").addEventListener("click", async () => {
     await sb.auth.signOut();
     try { localStorage.removeItem("dc-movil-ultimo-uso"); } catch (e) {}
@@ -485,6 +485,8 @@
   // ---------- Cerrar la sesión si no se usa (Configuración › Seguridad; 10 minutos por defecto) ----------
   const ULTIMO = "dc-movil-ultimo-uso";
   let anotado = 0;
+  // 30/10/2026: al entrar se anota la hora de una vez; antes, si no se tocaba la pantalla después de entrar, nunca se cerraba.
+  function usoNuevo() { anotado = 0; anotarUso(); }
   function anotarUso() {
     const ahora = Date.now();
     if (ahora - anotado < 15000) return;
@@ -507,10 +509,12 @@
   }
   ["pointerdown", "keydown", "scroll"].forEach(t => document.addEventListener(t, () => { if (datos && !inactivo()) anotarUso(); }, { capture: true, passive: true }));
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") revisarInactividad(); });
+  ["focus", "pageshow"].forEach(t => window.addEventListener(t, revisarInactividad));
   setInterval(revisarInactividad, 30000);
 
-  async function iniciar() {
+  async function iniciar(recienEntro) {
     const { data } = await sb.auth.getSession();
+    if (recienEntro === true && data.session) usoNuevo();
     // Al abrir la app después de mucho rato sin usarla, se pide entrar de nuevo (con la huella o la contraseña).
     if (data.session && !CLAVE.enRecuperacion && inactivo()) {
       await sb.auth.signOut();
@@ -524,7 +528,8 @@
       $("nueva-clave").classList.remove("oculto");
       return;
     }
-    if (data.session) await cargar(); else mostrarEntrada(CLAVE.errorEnlace);
+    if (data.session) { await cargar(); if (datos) { let u = 0; try { u = Number(localStorage.getItem(ULTIMO)) || 0; } catch (e) {} if (!u) usoNuevo(); } }
+    else mostrarEntrada(CLAVE.errorEnlace);
   }
 
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

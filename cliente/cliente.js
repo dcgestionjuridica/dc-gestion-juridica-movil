@@ -55,7 +55,7 @@
     $("ok-entrada").textContent = "";
   }
   $("tab-entrar").addEventListener("click", () => modo(false));
-  if (window.DCHuella) DCHuella.montar(sb, "cliente", iniciar);
+  if (window.DCHuella) DCHuella.montar(sb, "cliente", () => iniciar(true));
   $("tab-crear").addEventListener("click", () => modo(true));
 
   $("form-entrada").addEventListener("submit", async ev => {
@@ -81,14 +81,14 @@
           return;
         }
         $("clave").value = ""; $("clave2").value = "";
-        await iniciar();
+        await iniciar(true);
         // 28/10/2026: primera vez, recién creada la cuenta con el código, se ofrece la huella (solo celular).
         if (window.DCHuella && datos) DCHuella.ofrecer();
       } else {
         const { error } = await sb.auth.signInWithPassword({ email: correo, password: clave });
         if (error) { $("error-entrada").textContent = traducir(error.message); return; }
         $("clave").value = "";
-        await iniciar();
+        await iniciar(true);
         // 28/10/2026: después de entrar con contraseña se ofrece «Entrar con huella» (solo celular, una vez).
         if (window.DCHuella && datos) DCHuella.ofrecer();
       }
@@ -121,6 +121,7 @@
   }
   async function salir() {
     await sb.auth.signOut();
+    try { localStorage.removeItem(ULTIMO); } catch (e) {}
     datos = null;
     modo(false);
     mostrar("entrada");
@@ -493,7 +494,7 @@
     pintar();
   });
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && datos && Date.now() - cargadoEn > 120000) cargar();
+    if (document.visibilityState === "visible" && datos && !inactivo() && Date.now() - cargadoEn > 120000) cargar();
   });
 
   // Recuperar contraseña: ver ../clave.js.
@@ -512,10 +513,34 @@
     alCerrar() { if (datos) pintar(); }
   });
   $("volver-clave").addEventListener("click", ev => { ev.preventDefault(); $("volver-clave").classList.add("oculto"); mostrar("app"); });
-  async function iniciar() {
+  // ---------- Cerrar la sesión si no se usa (30/10/2026, Darío): 10 minutos, igual que la app del abogado ----------
+  const ULTIMO = "dc-portal-ultimo-uso", MINUTOS_SIN_USO = 10;
+  let anotado = 0;
+  function anotarUso(forzar) {
+    const ahora = Date.now();
+    if (!forzar && ahora - anotado < 15000) return;
+    anotado = ahora;
+    try { localStorage.setItem(ULTIMO, String(ahora)); } catch (e) {}
+  }
+  function ultimoUso() { try { return Number(localStorage.getItem(ULTIMO)) || 0; } catch (e) { return 0; } }
+  function inactivo() { const u = ultimoUso(); return u > 0 && Date.now() - u > MINUTOS_SIN_USO * 60000; }
+  async function revisarInactividad() {
+    if (!datos || !inactivo()) return;
+    await salir();
+    $("error-entrada").textContent = "Cerramos la sesión porque no la usó por un rato.";
+  }
+  ["pointerdown", "keydown", "scroll"].forEach(t => document.addEventListener(t, () => { if (datos && !inactivo()) anotarUso(); }, { capture: true, passive: true }));
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") revisarInactividad(); });
+  ["focus", "pageshow"].forEach(t => window.addEventListener(t, revisarInactividad));
+  setInterval(revisarInactividad, 30000);
+
+  async function iniciar(recienEntro) {
     const { data } = await sb.auth.getSession();
     if (CLAVE.enRecuperacion && data.session) { mostrar("nueva-clave"); return; }
-    if (data.session) await cargar();
+    if (recienEntro === true && data.session) anotarUso(true);
+    // Al abrir el portal después de mucho rato sin usarlo, se pide entrar de nuevo.
+    if (data.session && inactivo()) { await salir(); return; }
+    if (data.session) { await cargar(); if (datos && !ultimoUso()) anotarUso(true); }
     else { mostrar("entrada"); $("error-entrada").textContent = CLAVE.errorEnlace; }
   }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});
