@@ -357,18 +357,82 @@
     return vistaProcesos() + tarjetaAvisos();
   }
 
+  // V1.6.2: «Así va su proceso» (modelo aprobado por Darío el 29/10): cada paso que el despacho agrega al
+  // historial, con su explicación y el PDF para ver o descargar; arriba, el próximo paso.
+  const MESES = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+  function fechaPaso(t, conHora) {
+    const m = String(t || "").match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+    if (!m) return "";
+    let f = +m[3] + " " + MESES[+m[2] - 1] + " " + m[1];
+    if (conHora && m[4] !== undefined && !(m[4] === "00" && m[5] === "00")) {
+      const h = +m[4];
+      f += " · " + ((h + 11) % 12 + 1) + ":" + m[5] + (h < 12 ? " A. M." : " P. M.");
+    }
+    return f;
+  }
+  function lineaHistorial(pasos, apertura) {
+    if (!pasos.length) return "";
+    let h = '<div class="hist-t">Así va su proceso</div><div class="hist">';
+    const ult = pasos[0];
+    const hoy = L.hoyLocal ? L.iso(L.hoyLocal()) : new Date().toISOString().slice(0, 10);
+    if (ult.proximo_paso && (!ult.proximo_fecha || String(ult.proximo_fecha).slice(0, 10) >= hoy)) {
+      h += '<div class="paso futuro"><div class="bola">' + (pasos.length + 1) + '</div><div class="crece">' +
+        (ult.proximo_fecha ? '<div class="pf">' + esc(fechaPaso(ult.proximo_fecha, true)) + "</div>" : "") +
+        '<div class="pt">' + esc(ult.proximo_paso) + "</div>" +
+        '<div class="pnota">📅 Próximo paso.' + (ult.proximo_detalle ? " " + esc(ult.proximo_detalle) : " El despacho le avisará cualquier novedad.") + "</div></div></div>";
+    }
+    pasos.forEach((p, i) => {
+      const filas = [["Documento", p.numero], ["Entidad", p.entidad], ["Responsable", p.responsable]].filter(x => String(x[1] || "").trim())
+        .map(x => '<div class="pfila"><span>' + x[0] + ":</span> " + esc(x[1]) + "</div>").join("");
+      const doc = p.documento ? '<div class="pbotones"><button class="pver" data-doc="ver" data-ruta="' + esc(p.documento.ruta) + '" data-nombre="' + esc(p.documento.nombre) + '">Ver documento</button>' +
+        '<button class="pbajar" data-doc="bajar" data-ruta="' + esc(p.documento.ruta) + '" data-nombre="' + esc(p.documento.nombre) + '">⬇ Descargar PDF</button></div>' : "";
+      const detalle = (p.explicacion ? '<div class="pexp">' + esc(p.explicacion) + "</div>" : "") + filas + doc;
+      h += '<div class="paso' + (i === 0 ? " actual" : "") + '"><div class="bola">' + (pasos.length - i) + '</div><div class="crece">' +
+        '<div class="pf">' + esc(fechaPaso(p.fecha)) + "</div>" +
+        (detalle ? '<details' + (i === 0 ? " open" : "") + '><summary class="pt">' + esc(p.titulo) + (p.nuevo ? ' <b class="nuevo">NUEVO</b>' : "") + "</summary>" +
+          '<div class="pcaja">' + detalle + "</div></details>"
+          : '<div class="pt">' + esc(p.titulo) + (p.nuevo ? ' <b class="nuevo">NUEVO</b>' : "") + "</div>") +
+        "</div></div>";
+    });
+    if (apertura) h += '<div class="paso hecho"><div class="bola">✓</div><div class="crece"><div class="pf">' + esc(fechaPaso(apertura)) +
+      '</div><div class="pt">Se abrió su expediente en el despacho</div></div></div>';
+    return h + "</div>";
+  }
+  document.addEventListener("click", async ev => {
+    const b = ev.target.closest && ev.target.closest("button[data-doc]");
+    if (!b) return;
+    const ver = b.dataset.doc === "ver";
+    // La ventana se abre en el mismo toque (si no, el celular la bloquea) y luego recibe el enlace.
+    const ventana = ver ? window.open("", "_blank") : null;
+    const antes = b.textContent;
+    b.disabled = true; b.textContent = "Abriendo…";
+    try {
+      const { data, error } = await sb.storage.from("documentos").createSignedUrl(b.dataset.ruta, 600, ver ? undefined : { download: b.dataset.nombre || true });
+      if (error || !data || !data.signedUrl) throw error || new Error("sin enlace");
+      if (ventana) ventana.location.href = data.signedUrl; else window.location.href = data.signedUrl;
+    } catch (e) {
+      if (ventana) ventana.close();
+      alert("No fue posible abrir el documento. Revise su conexión e intente de nuevo.");
+    } finally {
+      b.disabled = false; b.textContent = antes;
+    }
+  });
+
   function vistaProcesos() {
     const exps = datos.expedientes || [];
-    if (!exps.length) return tarjeta("Su proceso", "", vacio("Todavía no hay un expediente registrado. Si tiene preguntas, comuníquese con el despacho."));
-    return exps.map(e => {
+    const general = datos.historial_general || [];
+    if (!exps.length && !general.length) return tarjeta("Su proceso", "", vacio("Todavía no hay un expediente registrado. Si tiene preguntas, comuníquese con el despacho."));
+    return (general.length ? tarjeta("Su proceso", "", lineaHistorial(general, "")) : "") + exps.map(e => {
+      const pasos = e.historial || [];
       let h = '<div class="it"><div class="crece">' + esc(e.asunto || e.servicio || "Proceso") +
         "<small>" + esc(e.servicio && e.asunto ? e.servicio + " · " : "") + "Abierto el " + esc(L.fechaCorta(e.apertura)) + "</small></div></div>";
+      h += lineaHistorial(pasos, e.apertura);
       if (e.rama && e.rama.fecha) {
         h += item("a", "Última actuación en la Rama Judicial", esc(L.fechaCorta(e.rama.fecha)) + (e.rama.actuacion ? " · " + esc(String(e.rama.actuacion).slice(0, 220)) : "") +
           "<br>Radicado " + esc(e.rama.radicado));
       }
       (e.actuaciones || []).forEach(a => { h += item("z", esc(a.nombre), esc(L.fechaCorta(a.fecha))); });
-      if (!(e.rama && e.rama.fecha) && !(e.actuaciones || []).length) h += vacio("Aún no hay actuaciones registradas.");
+      if (!(e.rama && e.rama.fecha) && !(e.actuaciones || []).length && !pasos.length) h += vacio("Aún no hay actuaciones registradas.");
       return tarjeta("Expediente " + esc(e.numero), esc(e.estado), h, e.rama && e.rama.fecha ? "mov" : "");
     }).join("");
   }
