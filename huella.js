@@ -33,12 +33,12 @@
   }
 
   // 30/10/2026: si el servidor no responde en 15 segundos se avisa, en vez de quedarse pegado.
-  async function llamar(cuerpo, token) {
+  async function llamar(cuerpo, token, segundos) {
     const cfg = window.DC_CONFIG || {};
     const h = { "Content-Type": "application/json", apikey: cfg.clavePublica || "" };
     if (token) h.Authorization = "Bearer " + token;
     const corte = window.AbortController ? new AbortController() : null;
-    const reloj = corte ? setTimeout(() => corte.abort(), 15000) : 0;
+    const reloj = corte ? setTimeout(() => corte.abort(), (segundos || 15) * 1000) : 0;
     try {
       const r = await fetch((cfg.url || "") + "/functions/v1/huella", { method: "POST", headers: h, body: JSON.stringify(cuerpo), signal: corte ? corte.signal : undefined });
       const j = await r.json().catch(() => ({ error: "Sin respuesta del servidor." }));
@@ -150,7 +150,7 @@
       toque.textContent = "Entrando…";
       const r = cred.response;
       const v = await llamar({ accion: "entrada_verificar", respuesta: { id: cred.id, rawId: b64(cred.rawId), type: cred.type, clientExtensionResults: {}, response: {
-        clientDataJSON: b64(r.clientDataJSON), authenticatorData: b64(r.authenticatorData), signature: b64(r.signature), userHandle: r.userHandle ? b64(r.userHandle) : undefined } } });
+        clientDataJSON: b64(r.clientDataJSON), authenticatorData: b64(r.authenticatorData), signature: b64(r.signature), userHandle: r.userHandle ? b64(r.userHandle) : undefined } } }, null, 30);
       if (v.error) {
         if (v.estado === 404) { guardar(clave(), ""); guardar(clave() + "-quien", ""); forzarFormulario = true; pintar(); }
         err.textContent = v.error;
