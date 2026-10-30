@@ -99,6 +99,8 @@
         sb.rpc("vigilancia_listar_transaccional", { datos: {} }).then(r => (r.error ? [] : (r.data && r.data.procesos) || [])),
         sb.rpc("mensajes_clientes_lista_transaccional", { datos: {} }).then(r => (r.error ? [] : (r.data && r.data.filas) || []))
       ]);
+      // 30/10/2026: el aviso «Movimiento nuevo» se quita solo cuando ya tiene más de 7 días (el proceso sigue en la lista).
+      vigilancia.forEach(p => { if (p.pendiente && p.movimiento_en && Date.now() - Date.parse(p.movimiento_en) > 7 * 86400000) p.pendiente = false; });
       const perfil = perfiles[0];
       if (!perfil || perfil.activo === false) {
         await sb.auth.signOut();
@@ -355,6 +357,7 @@
     if (!lista.length) return tarjeta("Procesos vigilados", "", vacio("Todavía no hay radicados en vigilancia. Se agregan en el programa del PC, en la ficha del expediente."));
     return tarjeta("Procesos vigilados", lista.length, lista.map(p => {
       const sub = "Radicado " + esc(p.radicado) + "<br>" +
+        (p.ultima_revision ? '<span class="revisado">Revisado: ' + esc(horaMsj(p.ultima_revision)) + "</span><br>" : "") +
         (p.ultima_fecha_actuacion ? "Última actuación: " + esc(L.fechaCorta(p.ultima_fecha_actuacion)) + (p.ultima_actuacion ? " · " + esc(String(p.ultima_actuacion).slice(0, 220)) : "") : "Aún sin revisar.") +
         '<br><a class="enlace" href="' + PORTAL + '" target="_blank" rel="noopener" data-radicado="' + esc(p.radicado) + '">Ver en el portal (copia el radicado)</a>';
       return item(p.pendiente ? "a" : "z", (p.pendiente ? "Movimiento nuevo · " : "") + (p.cliente || "Sin cliente") + " · " + p.expediente_numero, sub);
@@ -370,6 +373,29 @@
     pintar();
   });
   $("buscar").addEventListener("input", () => pintar());
+
+  // 30/10/2026: deslizar el dedo a la izquierda o a la derecha pasa al módulo siguiente o al anterior.
+  let toque = null;
+  const appEl = $("app");
+  appEl.addEventListener("touchstart", ev => {
+    const t = ev.touches[0];
+    toque = ev.touches.length === 1 && !ev.target.closest("input, textarea, select, .chips, .nav, #hilo-abogado") ? { x: t.clientX, y: t.clientY, en: Date.now() } : null;
+  }, { passive: true });
+  appEl.addEventListener("touchend", ev => {
+    if (!toque || !datos || $("buscar").value.trim().length >= 2) { toque = null; return; }
+    const t = ev.changedTouches[0], dx = t.clientX - toque.x, dy = t.clientY - toque.y, rapido = Date.now() - toque.en < 700;
+    toque = null;
+    if (!rapido || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+    const orden = [...document.querySelectorAll(".nav button[data-vista]")].map(b => b.dataset.vista);
+    const i = orden.indexOf(vista) + (dx < 0 ? 1 : -1);
+    if (i < 0 || i >= orden.length) return;
+    vista = orden[i];
+    pintar();
+    const c = $("cuerpo");
+    c.classList.remove("entra-der", "entra-izq");
+    void c.offsetWidth;
+    c.classList.add(dx < 0 ? "entra-der" : "entra-izq");
+  }, { passive: true });
   $("cuerpo").addEventListener("click", ev => {
     const ir = ev.target.closest("[data-ir]");
     if (ir) { ev.preventDefault(); vista = ir.dataset.ir; pestana = "vencimientos"; pintar(); return; }

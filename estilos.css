@@ -2,11 +2,11 @@
    Diseño aprobado por Darío (11/10/2026): modo claro = Modelo B (estilo Google, tarjetas de color suave);
    modo oscuro = Modelo C (azul noche y dorado). El usuario cambia de modo con el botón de luna/sol. */
 :root {
-  --fondo:#f8f9ff; --sup:#ffffff; --sup2:#eef1f8; --texto:#191c20; --texto2:#5b6472; --linea:#e1e5ee;
+  --fondo:#fbf6ea; --sup:#ffffff; --sup2:#eef1f8; --texto:#191c20; --texto2:#5b6472; --linea:#e1e5ee;
   --primario:#0f2540; --tonal:#d6e3ff; --tonal-txt:#0f2540; --oro:#ffe08f; --oro-txt:#3d2e00; --acento:#b8901c;
   --rojo:#ffdad6; --rojo-txt:#93000a; --ambar:#ffe08f; --ambar-txt:#5c4300; --verde:#c4eed0; --verde-txt:#0a5c2b; --azul:#d6e3ff; --azul-txt:#0f2540;
   --nav:#eef1f8; --nav-on:#d6e3ff; --campo:#ffffff; --campo-borde:#c3c7cf; --sombra:0 1px 2px rgba(15,37,64,.08);
-  --cab:#f8f9ff; --cab-txt:#0f2540; --cab-txt2:#5b6472;
+  --cab:#fbf6ea; --cab-txt:#0f2540; --cab-txt2:#5b6472;
   --entrada:linear-gradient(170deg,#e8eefc 0%,#f8f9ff 60%);
   --fuente:"Roboto Flex", Roboto, "Segoe UI", Arial, sans-serif;
 }
@@ -382,3 +382,26 @@ html[data-tema="oscuro"] .paso .pcaja { background:var(--oro); color:var(--texto
 html[data-tema="oscuro"] .paso .pver { color:#0b1626; }
 .paso .pbajar { background:var(--tonal); color:var(--tonal-txt); }
 .paso .pbotones button:disabled { opacity:.6; }
+/* 30/10/2026: al deslizar el dedo, el módulo nuevo entra por el lado del gesto. */
+.entra-der { animation:entra-der .22s ease-out; }
+.entra-izq { animation:entra-izq .22s ease-out; }
+@keyframes entra-der { from { transform:translateX(36px); opacity:.4; } }
+@keyframes entra-izq { from { transform:translateX(-36px); opacity:.4; } }
+.revisado { color:var(--texto2); font-weight:600; }
+
+/* ---------- 30/10/2026 (modelo aprobado por Darío): fondo dorado tenue, íconos de 30 px, la pestaña activa
+   sube en un círculo azul con el ícono dorado, y botones de arriba más grandes. ---------- */
+.nav .ic-caja svg { width:30px; height:30px; }
+.nav .ic-caja, .nav:has(button:nth-child(6)) .ic-caja { width:52px; height:52px; border-radius:50%; }
+.nav button { gap:0; }
+.nav .on { color:var(--primario); }
+.nav .on .ic-caja, html[data-tema="oscuro"] .nav .on .ic-caja { background:linear-gradient(135deg,#1d4f91 0%,#0f2540 100%); color:#ffd36b;
+  transform:translateY(-14px); box-shadow:0 10px 22px rgba(15,37,64,.38),0 0 0 4px var(--fondo); }
+html[data-tema="oscuro"] .nav .on .ic-caja { background:linear-gradient(135deg,#e7c565 0%,#b8901c 100%); color:#0f2540; }
+.nav .on .nav-txt { margin-top:-10px; }
+.nav button:active .ic-caja { transform:scale(.9); }
+.nav .on:active .ic-caja { transform:translateY(-14px) scale(.94); }
+.cab .cab-btn { width:44px; height:44px; justify-content:center; align-items:center; padding:0; margin-left:6px; border-radius:14px;
+  background:var(--sup); color:var(--cab-txt); box-shadow:0 4px 12px rgba(15,37,64,.10); }
+html[data-tema="oscuro"] .cab .cab-btn { box-shadow:none; border:1px solid var(--linea); }
+.cab .cab-btn svg { width:24px; height:24px; }
