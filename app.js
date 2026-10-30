@@ -194,13 +194,13 @@
       '<button type="button" class="tab-msj' + (mensajes.filtro === "mi" ? " on" : "") + '" data-filtro="mi">Para mí' + (paraMi ? ' <span class="n">' + paraMi + "</span>" : "") + "</button>" +
       '<button type="button" class="tab-msj' + (mensajes.filtro === "resp" ? " on" : "") + '" data-filtro="resp">Sin responder</button></div>';
     // 30/10/2026 (modelo aprobado): lista estilo chat con iniciales, hora, vista previa y estado (Nuevo, Por responder, Respondido).
-    const estado = f => Number(f.sin_leer) > 0 ? '<span class="est-msj nuevo">Nuevo</span>' : f.por_responder ? '<span class="est-msj resp">Por responder</span>' : '<span class="est-msj ok">✓ Respondido</span>';
+    const estado = f => Number(f.sin_leer) > 0 ? '<span class="est-msj nuevo">Nuevo</span>' : f.por_responder ? '<span class="est-msj resp">Por responder</span>' : f.cliente_escribio === false ? '<span class="est-msj ok">✓ Enviado</span>' : '<span class="est-msj ok">✓ Respondido</span>';
     return nuevo + tabs + tarjeta("Mensajes de clientes", filas.filter(f => f.por_responder).length + " por responder", fil.length ? fil.map(f =>
       '<div class="fila-msj' + (Number(f.sin_leer) > 0 ? " sin-leer" : "") + (f.para_mi ? " para-mi" : "") + '" data-msj="abrir" data-cliente="' + esc(f.cliente_id) + '">' +
       '<span class="msj-av">' + esc(iniciales(f.cliente)) + (Number(f.sin_leer) > 0 ? '<i class="msj-punto"></i>' : "") + "</span>" +
       '<div class="crece"><div class="msj-l1"><b>' + esc(f.cliente) + '</b><time>' + esc(horaMsj(f.ultimo_en)) + "</time></div>" +
       '<div class="msj-prev">' + (f.ultimo_de === "despacho" ? "Usted: " : "") + esc(String(f.ultimo_texto || "").slice(0, 120)) + "</div>" +
-      '<div class="msj-l3"><span class="para-pill' + (f.para_mi ? " mi" : "") + '">' + (f.para_mi ? "Para ti" : "Para: " + esc(conTitulo(f.para) || "Todo el despacho")) + "</span>" + estado(f) + "</div></div></div>").join("") : vacio("No hay mensajes en esta pestaña.")) + hojaClientes();
+      '<div class="msj-l3">' + (f.cliente_escribio === false ? "" : '<span class="para-pill' + (f.para_mi ? " mi" : "") + '">' + (f.para_mi ? "Para ti" : "Para: " + esc(conTitulo(f.para) || "Todo el despacho")) + "</span>") + estado(f) + "</div></div></div>").join("") : vacio("No hay mensajes en esta pestaña.")) + hojaClientes();
   }
   // Lista para elegir a qué cliente escribirle: solo los que ya entraron al portal (allí leen el mensaje).
   function hojaClientes() {
