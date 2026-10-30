@@ -66,9 +66,19 @@
     // 28/10/2026: después de entrar con contraseña se ofrece «Entrar con huella» (solo celular, una vez).
     if (window.DCHuella) DCHuella.ofrecer();
   });
+  // 30/10/2026 (Darío): cerrar sesión borra la sesión del celular AL INSTANTE. Antes se esperaba la respuesta del
+  // servidor y, si el internet estaba lento o se recargaba la página antes, la sesión quedaba guardada y volvía a entrar.
+  async function cerrarSesion() {
+    let token = "";
+    try { const { data } = await sb.auth.getSession(); token = (data.session && data.session.access_token) || ""; } catch (e) {}
+    try { Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    if (token) fetch(cfg.url + "/auth/v1/logout?scope=global", { method: "POST", keepalive: true,
+      headers: { apikey: cfg.clavePublica, Authorization: "Bearer " + token } }).catch(() => {});
+    try { await sb.auth.signOut({ scope: "local" }); } catch (e) {}
+  }
   if (window.DCHuella) DCHuella.montar(sb, "movil", () => iniciar(true));
   $("btn-salir").addEventListener("click", async () => {
-    await sb.auth.signOut();
+    await cerrarSesion();
     try { localStorage.removeItem("dc-movil-ultimo-uso"); } catch (e) {}
     datos = null;
     mostrarEntrada("");
@@ -103,7 +113,7 @@
       vigilancia.forEach(p => { if (p.pendiente && p.movimiento_en && Date.now() - Date.parse(p.movimiento_en) > 7 * 86400000) p.pendiente = false; });
       const perfil = perfiles[0];
       if (!perfil || perfil.activo === false) {
-        await sb.auth.signOut();
+        await cerrarSesion();
         mostrarEntrada("Su cuenta no está activa. Pídale al administrador que la active.");
         return;
       }
@@ -501,7 +511,7 @@
   }
   async function revisarInactividad() {
     if (!datos || !inactivo()) return;
-    await sb.auth.signOut();
+    await cerrarSesion();
     try { localStorage.removeItem(ULTIMO); } catch (e) {}
     datos = null;
     if (window.DCAjustes) DCAjustes.cerrar();
@@ -517,7 +527,7 @@
     if (recienEntro === true && data.session) usoNuevo();
     // Al abrir la app después de mucho rato sin usarla, se pide entrar de nuevo (con la huella o la contraseña).
     if (data.session && !CLAVE.enRecuperacion && inactivo()) {
-      await sb.auth.signOut();
+      await cerrarSesion();
       try { localStorage.removeItem(ULTIMO); } catch (e) {}
       mostrarEntrada("");
       return;

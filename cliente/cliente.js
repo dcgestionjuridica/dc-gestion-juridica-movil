@@ -119,8 +119,18 @@
     guardarCodigo("");
     return true;
   }
+  // 30/10/2026 (Darío): cerrar sesión borra la sesión del celular AL INSTANTE. Antes se esperaba la respuesta del
+  // servidor y, si el internet estaba lento o se recargaba la página antes, la sesión quedaba guardada y volvía a entrar.
+  async function cerrarSesion() {
+    let token = "";
+    try { const { data } = await sb.auth.getSession(); token = (data.session && data.session.access_token) || ""; } catch (e) {}
+    try { Object.keys(localStorage).filter(k => /^dc-portal-cliente-sesion/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    if (token) fetch(cfg.url + "/auth/v1/logout?scope=global", { method: "POST", keepalive: true,
+      headers: { apikey: cfg.clavePublica, Authorization: "Bearer " + token } }).catch(() => {});
+    try { await sb.auth.signOut({ scope: "local" }); } catch (e) {}
+  }
   async function salir() {
-    await sb.auth.signOut();
+    await cerrarSesion();
     try { localStorage.removeItem(ULTIMO); } catch (e) {}
     datos = null;
     modo(false);
