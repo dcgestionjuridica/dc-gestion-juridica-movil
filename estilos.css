@@ -405,3 +405,32 @@ html[data-tema="oscuro"] .nav .on .ic-caja { background:linear-gradient(135deg,#
   background:var(--sup); color:var(--cab-txt); box-shadow:0 4px 12px rgba(15,37,64,.10); }
 html[data-tema="oscuro"] .cab .cab-btn { box-shadow:none; border:1px solid var(--linea); }
 .cab .cab-btn svg { width:24px; height:24px; }
+
+/* ---------- 30/10/2026 (modelo aprobado por Darío): mensajes de clientes estilo chat ---------- */
+.fila-msj { display:flex; gap:12px; align-items:flex-start; padding:12px 4px; cursor:pointer; }
+.fila-msj + .fila-msj { border-top:1px solid var(--linea); }
+.fila-msj:active { background:var(--sup2); }
+.fila-msj.para-mi { background:none; border-left:0; }
+.msj-av { position:relative; flex:none; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-size:15px; font-weight:800; letter-spacing:.02em;
+  background:linear-gradient(135deg,#1d4f91,#0f2540); color:#ffd36b; box-shadow:0 4px 10px rgba(15,37,64,.22); }
+.msj-punto { position:absolute; top:-1px; right:-1px; width:13px; height:13px; border-radius:50%; background:#2f7de1; box-shadow:0 0 0 2.5px var(--sup); }
+.msj-l1 { display:flex; align-items:baseline; gap:8px; }
+.msj-l1 b { flex:1; min-width:0; font-size:15px; font-weight:700; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.msj-l1 time { flex:none; font-size:12px; color:var(--texto2); }
+.sin-leer .msj-l1 time { color:#2f7de1; font-weight:700; }
+.msj-prev { margin-top:2px; font-size:13.5px; line-height:1.35; color:var(--texto2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.sin-leer .msj-prev { color:var(--texto); font-weight:500; }
+.msj-l3 { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
+.msj-l3 .para-pill { margin-top:0; }
+.est-msj { display:inline-block; font-size:11.5px; font-weight:700; border-radius:999px; padding:3px 9px; }
+.est-msj.nuevo { background:#2f7de1; color:#fff; }
+.est-msj.resp { background:var(--ambar); color:var(--ambar-txt); }
+.est-msj.ok { background:var(--verde); color:var(--verde-txt); }
+html[data-tema="oscuro"] .para-tag, html[data-tema="oscuro"] .para-pill { background:rgba(255,255,255,.08); color:#c7d2e4; }
+html[data-tema="oscuro"] .para-pill.mi, html[data-tema="oscuro"] .msj.cli .para-tag { background:rgba(217,181,74,.18); color:#f3d98a; }
+.msj-cab { display:flex; gap:12px; align-items:center; background:var(--sup); border:1px solid var(--linea); border-radius:16px; padding:10px 14px; }
+.msj-cab b { display:block; font-size:15px; color:var(--texto); }
+.msj-cab span:not(.msj-av) { font-size:12.5px; color:var(--texto2); }
+.msj .enviado { font-size:11px; font-weight:700; margin-top:3px; color:#9fe0b5; }
+.msj-ok { align-self:center; background:var(--verde); color:var(--verde-txt); font-size:13px; font-weight:700; border-radius:999px; padding:7px 14px; animation:msj-ok .25s ease-out; }
+@keyframes msj-ok { from { transform:translateY(6px); opacity:0; } }

@@ -145,7 +145,8 @@
     const html = q.length >= 2 ? vistaBusqueda(q) : { inicio: vistaInicio, pendientes: vistaPendientes, agenda: vistaAgenda, procesos: vistaProcesos, mensajes: vistaMensajes, acerca: vistaAcerca }[vista]();
     $("cuerpo").innerHTML = html;
     $("cuerpo").scrollTop = 0;
-    const porResponder = (mensajes.lista || []).filter(f => f.por_responder).length;
+    // 30/10/2026 (Darío): el número de abajo cuenta los mensajes sin leer; al abrir la conversación se borra, aunque no se haya respondido.
+    const porResponder = (mensajes.lista || []).filter(f => Number(f.sin_leer) > 0).length;
     const bm = $("badge-msj");
     if (bm) { bm.textContent = porResponder; bm.classList.toggle("oculto", porResponder === 0); }
     if (vista === "mensajes" && mensajes.abierto) { const h = $("hilo-abogado"); if (h) h.scrollTop = h.scrollHeight; }
@@ -165,7 +166,7 @@
     if (mensajes.abierto) {
       const f = mensajes.abierto;
       let h = '<div class="chat"><button type="button" class="chat-volver" data-msj="volver">‹ Volver a los mensajes</button>' +
-        '<div class="msj-card"><b>' + esc(f.cliente) + "</b>" + (f.expediente ? "<span>Proceso " + esc(f.expediente) + "</span>" : "") + "</div>" +
+        '<div class="msj-cab"><span class="msj-av">' + esc(iniciales(f.cliente)) + '</span><div class="crece"><b>' + esc(f.cliente) + "</b>" + (f.expediente ? "<span>Proceso " + esc(f.expediente) + "</span>" : "<span>Portal del cliente</span>") + "</div></div>" +
         '<div id="hilo-abogado" class="hilo">';
       mensajes.hilo.forEach(m => {
         h += '<div class="msj ' + (m.de === "cliente" ? "abo" : "cli") + '">' + esc(m.texto).replace(/\n/g, "<br>") +
@@ -178,19 +179,26 @@
     }
     const filas = mensajes.lista || [];
     if (!filas.length) return tarjeta("Mensajes de clientes", "", vacio("Todavía ningún cliente ha escrito desde su portal."));
-    const paraMi = filas.filter(f => f.para_mi && f.por_responder).length;
+    const paraMi = filas.filter(f => f.para_mi && Number(f.sin_leer) > 0).length;
     const fil = mensajes.filtro === "mi" ? filas.filter(f => f.para_mi) : mensajes.filtro === "resp" ? filas.filter(f => f.por_responder) : filas;
     const tabs = '<div class="tabs-msj"><button type="button" class="tab-msj' + (mensajes.filtro === "todos" ? " on" : "") + '" data-filtro="todos">Todos</button>' +
       '<button type="button" class="tab-msj' + (mensajes.filtro === "mi" ? " on" : "") + '" data-filtro="mi">Para mí' + (paraMi ? ' <span class="n">' + paraMi + "</span>" : "") + "</button>" +
       '<button type="button" class="tab-msj' + (mensajes.filtro === "resp" ? " on" : "") + '" data-filtro="resp">Sin responder</button></div>';
+    // 30/10/2026 (modelo aprobado): lista estilo chat con iniciales, hora, vista previa y estado (Nuevo, Por responder, Respondido).
+    const estado = f => Number(f.sin_leer) > 0 ? '<span class="est-msj nuevo">Nuevo</span>' : f.por_responder ? '<span class="est-msj resp">Por responder</span>' : '<span class="est-msj ok">✓ Respondido</span>';
     return tabs + tarjeta("Mensajes de clientes", filas.filter(f => f.por_responder).length + " por responder", fil.length ? fil.map(f =>
-      '<div class="it fila-msj' + (f.para_mi && f.por_responder ? " para-mi" : "") + '" data-msj="abrir" data-cliente="' + esc(f.cliente_id) + '"><div class="pto ' + (f.por_responder ? "r" : "v") + '"><svg><use href="#' + (f.por_responder ? "ic-alerta" : "ic-check") + '"/></svg></div>' +
-      '<div class="crece"><b>' + esc(f.cliente) + '</b> <span class="para-pill' + (f.para_mi ? " mi" : "") + '">' + (f.para_mi ? "Para ti" : "Para: " + esc(f.para || "Todo el despacho")) + "</span><small>" + esc(String(f.ultimo_texto || "").slice(0, 90)) + " · " + esc(f.por_responder ? "Por responder" : "Respondido") + "</small></div></div>").join("") : vacio("No hay mensajes en esta pestaña."));
+      '<div class="fila-msj' + (Number(f.sin_leer) > 0 ? " sin-leer" : "") + (f.para_mi ? " para-mi" : "") + '" data-msj="abrir" data-cliente="' + esc(f.cliente_id) + '">' +
+      '<span class="msj-av">' + esc(iniciales(f.cliente)) + (Number(f.sin_leer) > 0 ? '<i class="msj-punto"></i>' : "") + "</span>" +
+      '<div class="crece"><div class="msj-l1"><b>' + esc(f.cliente) + '</b><time>' + esc(horaMsj(f.ultimo_en)) + "</time></div>" +
+      '<div class="msj-prev">' + (f.ultimo_de === "despacho" ? "Usted: " : "") + esc(String(f.ultimo_texto || "").slice(0, 120)) + "</div>" +
+      '<div class="msj-l3"><span class="para-pill' + (f.para_mi ? " mi" : "") + '">' + (f.para_mi ? "Para ti" : "Para: " + esc(f.para || "Todo el despacho")) + "</span>" + estado(f) + "</div></div></div>").join("") : vacio("No hay mensajes en esta pestaña."));
   }
+  const iniciales = n => String(n || "").split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join("").toUpperCase();
   async function abrirHilo(f) {
     mensajes.abierto = f; mensajes.hilo = []; mensajes.error = ""; pintar();
     const { data, error } = await sb.rpc("mensajes_cliente_hilo_transaccional", { datos: { cliente_id: f.cliente_id } });
-    if (error) mensajes.error = error.message; else { mensajes.hilo = (data && data.mensajes) || []; f.por_responder = f.por_responder; }
+    // Al abrirla, la conversación queda leída (el servidor la marca) y el número de abajo se borra.
+    if (error) mensajes.error = error.message; else { mensajes.hilo = (data && data.mensajes) || []; f.sin_leer = 0; }
     pintar();
   }
   async function recargarLista() {

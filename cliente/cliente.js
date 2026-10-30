@@ -241,8 +241,11 @@
     mensajes.forEach(m => {
       h += '<div class="msj ' + (m.de === "cliente" ? "cli" : "abo") + '">' + esc(m.texto).replace(/\n/g, "<br>") +
         '<div class="hora">' + esc(horaMsj(m.creado_en)) + (m.de === "despacho" && m.quien ? " · " + esc(m.quien) : "") + "</div>" +
-        (m.de === "cliente" && m.para ? '<span class="para-tag">Para: ' + esc(m.para) + "</span>" : "") + "</div>";
+        (m.de === "cliente" && m.para ? '<span class="para-tag">Para: ' + esc(m.para) + "</span>" : "") +
+        (m.de === "cliente" ? '<div class="enviado">✓ Enviado</div>' : "") + "</div>";
     });
+    // 30/10/2026 (Darío): al darle «Enviar», el cliente ve que su mensaje ya salió.
+    if (recienEnviado) h += '<div class="msj-ok" role="status">✓ Mensaje enviado. Le responderemos pronto.</div>';
     h += '<div class="msj-aviso">' + esc(HORARIO) + "</div></div>" +
       '<form id="form-msj" class="caja-msj2"><div class="dest-lab">¿A quién va dirigido?</div><div class="dest-chips">' +
       '<button type="button" class="dest-chip' + (destino === "" ? " on" : "") + '" data-destino=""><span class="dest-av oro">★</span>Todo el despacho</button>' +
@@ -252,6 +255,7 @@
       '<div class="dest-nota">' + (destino ? "Todo el equipo verá su mensaje; " + esc(nomAbo(destino)) + " será quien le responda." : "Todo el equipo verá su mensaje y le responderá quien pueda.") + '</div></form><p id="err-msj" class="gris" style="margin:4px 14px"></p></div>';
     return h;
   }
+  let recienEnviado = false, relojEnviado = 0;
   async function cargarMensajes(avisar) {
     const { data, error } = await sb.rpc("portal_mensajes_mios_transaccional", { datos: {} });
     if (error) { if (avisar && $("err-msj")) $("err-msj").textContent = "No se pudieron cargar los mensajes: " + error.message; return; }
@@ -312,7 +316,11 @@
     if (error) { $("err-msj").textContent = error.message || "No se pudo enviar. Intente de nuevo."; $("env-msj").disabled = false; return; }
     caja.value = "";
     await cargarMensajes(true);
+    recienEnviado = true;
     pintar();
+    const hilo = $("hilo"); if (hilo) hilo.scrollTop = hilo.scrollHeight;
+    clearTimeout(relojEnviado);
+    relojEnviado = setTimeout(() => { recienEnviado = false; const ok = document.querySelector(".msj-ok"); if (ok) ok.remove(); }, 6000);
   });
 
   // V1.3.391: avisos al celular (cuota por vencer, novedad en su proceso, proceso abierto o cerrado, mensajes
