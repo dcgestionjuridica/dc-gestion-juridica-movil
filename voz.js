@@ -379,5 +379,5 @@
   }
   ponerBoton();
   // App completa (Compose): la cabecera llama window.DC_VOZ.abrir({ url, clave, token, version, oscuro }).
-  window.DC_VOZ = { abrir: o => { opciones = o || null; abrir(); } };
+  window.DC_VOZ = { abrir: o => { opciones = o || null; abrir(); }, cerrar: () => { if (reloj) { clearInterval(reloj); reloj = null; } cerrar(); } };
 })();

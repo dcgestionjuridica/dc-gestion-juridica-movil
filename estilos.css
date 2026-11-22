@@ -537,3 +537,7 @@ html[data-tema="oscuro"] .cab .cab-btn.voz-mic { border:0; color:#0f2540; }
 .voz-sino-otra svg { width:16px; height:16px; }
 .voz-sino:has(.voz-sino-otra) { display:block; }
 @media (prefers-reduced-motion: reduce) { .voz-sino.oye .voz-sino-mic { animation:none; } }
+/* 22/11/2026: aviso «Toque atrás otra vez para salir» */
+.aviso-salir { position:fixed; left:50%; bottom:calc(110px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:80; background:rgba(15,37,64,.94); color:#fff; font-size:14px; font-weight:600; padding:10px 18px; border-radius:22px; box-shadow:0 8px 24px rgba(0,0,0,.3); opacity:0; pointer-events:none; white-space:nowrap; }
+.aviso-salir.ve { animation:aviso-salir 2s ease forwards; }
+@keyframes aviso-salir { 0% { opacity:0; transform:translate(-50%,8px); } 10%,80% { opacity:1; transform:translate(-50%,0); } 100% { opacity:0; } }
