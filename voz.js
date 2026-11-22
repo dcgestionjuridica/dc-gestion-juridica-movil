@@ -286,7 +286,7 @@
     if (est.fase === "permiso") return cabeza("Falta el permiso del micrófono", "") + '<div class="voz-aviso">Permita el micrófono para esta página en los ajustes del navegador (el candado junto a la dirección › Permisos › Micrófono) y vuelva a intentarlo.</div>' + botones("Cerrar", "", "");
     if (est.fase === "sinvoz") return cabeza("Este navegador no reconoce la voz", "") + '<div class="voz-aviso">Abra la app en Google Chrome o en Microsoft Edge para usar las órdenes de voz.</div>' + botones("Cerrar", "", "");
     if (est.fase === "como") return cabeza("¿Cómo funciona?", "Órdenes de voz con Doc Dai") + '<div class="voz-como-txt">' +
-      "<p><b>1.</b> Toque el micrófono dorado de arriba y diga la orden con calma.</p>" +
+      "<p><b>1.</b> Toque el botón dorado de Doc Dai y diga la orden con calma.</p>" +
       "<p><b>2.</b> Doc Dai entiende lo que pidió y le muestra una tarjeta con los datos. Si hay clientes con nombres parecidos, usted elige a cuál.</p>" +
       "<p><b>3.</b> Doc Dai le pregunta en voz alta si lo hace. Puede contestar <b>«sí»</b> o <b>«no»</b> con la voz, o tocar el botón: es lo mismo. <b>Nada se envía</b> sin su sí, y aun así tiene 5 segundos para tocar «Deshacer».</p>" +
       "<p><b>Órdenes:</b> enviar la cuenta de cobro (si no tiene cuotas vencidas, va el recordatorio de la próxima), enviar un mensaje al portal del cliente, agendar tareas, recordatorios, audiencias o citas, preguntar qué tiene para un día y cuánto debe un cliente. <b>Todo se puede cancelar:</b> «cancela la tarea de mañana», «borra el mensaje que le mandé a…» (hasta 24 horas), «anula el cobro de…» (como el correo ya salió, se le envía al cliente un aviso de que no lo tenga en cuenta) o «deshaz lo último».</p>" +
@@ -296,6 +296,9 @@
     return "";
   }
   function pintar() {
+    // El botón de Doc Dai del menú crece y suena (ondas y barras) mientras escucha.
+    const dai = document.querySelector(".nav .dai");
+    if (dai) dai.classList.toggle("vivo", !!est && (est.fase === "escucha" || !!est.dictando || est.siNo === "oye"));
     let caja = $("voz-hoja");
     if (!est) { if (caja) caja.remove(); return; }
     if (!caja) { caja = document.createElement("div"); caja.id = "voz-hoja"; document.body.appendChild(caja); }
@@ -372,6 +375,8 @@
 
   // Botón dorado del micrófono en la cabecera (al lado de Configuración).
   function ponerBoton() {
+    // Si el menú de abajo ya trae a Doc Dai en el centro, no se pone el micrófono de arriba.
+    if (document.querySelector(".nav .dai")) return;
     const ref = $("btn-ajustes"); if (!ref || $("btn-voz")) return;
     const b = document.createElement("button");
     b.id = "btn-voz"; b.type = "button"; b.className = "cab-btn voz-mic"; b.title = "Órdenes de voz"; b.setAttribute("aria-label", "Órdenes de voz"); b.dataset.voz = "abrir";

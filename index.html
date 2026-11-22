@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&display=swap">
-<link rel="stylesheet" href="estilos.css?v=25">
+<link rel="stylesheet" href="estilos.css?v=26">
 <script src="tema.js?v=9"></script>
 <script>try{if(sessionStorage.getItem("dc-intro-vista")||localStorage.getItem("dc-intro-no"))document.documentElement.classList.add("sin-intro")}catch(e){}</script>
 </head>
@@ -95,25 +95,34 @@
     <label class="buscar"><svg class="ic" width="22" height="22"><use href="#ic-buscar"/></svg><input id="buscar" type="search" placeholder="Buscar cliente, expediente o radicado" aria-label="Buscar"></label>
   </header>
   <main id="cuerpo" class="cuerpo"></main>
-  <nav class="nav" aria-label="Menú principal">
-    <button data-vista="inicio" class="on"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-inicio-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-inicio-r"/></svg></span><span class="nav-txt">Inicio</span></button>
-    <button data-vista="pendientes"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-pend-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-pend-r"/></svg></span><span class="nav-txt">Pendientes</span></button>
-    <button data-vista="agenda"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-agenda-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-agenda-r"/></svg></span><span class="nav-txt">Agenda</span></button>
-    <button data-vista="procesos"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-balanza-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-balanza-r"/></svg></span><span class="nav-txt">Procesos</span></button>
-    <button data-vista="mensajes"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-msj-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-msj-r"/></svg><b id="badge-msj" class="badge-msj oculto"></b></span><span class="nav-txt">Mensajes</span></button>
-    <button data-vista="acerca"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-acerca-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-acerca-r"/></svg></span><span class="nav-txt">Acerca de</span></button>
+  <nav class="nav dock" aria-label="Menú principal">
+    <div class="base">
+      <div class="lado">
+      <button data-vista="inicio" class="on"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-inicio-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-inicio-r"/></svg></span><span class="nav-txt">Inicio</span></button>
+      <button data-vista="pendientes"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-pend-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-pend-r"/></svg></span><span class="nav-txt">Pendientes</span></button>
+      <button data-vista="agenda"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-agenda-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-agenda-r"/></svg></span><span class="nav-txt">Agenda</span></button>
+      </div>
+      <div class="hueco"></div>
+      <div class="lado">
+      <button data-vista="procesos"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-balanza-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-balanza-r"/></svg></span><span class="nav-txt">Procesos</span></button>
+      <button data-vista="mensajes"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-msj-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-msj-r"/></svg><b id="badge-msj" class="badge-msj oculto"></b></span><span class="nav-txt">Mensajes</span></button>
+      <button data-vista="acerca"><span class="ic-caja"><svg class="ic ic-l" width="26" height="26"><use href="#n-acerca-l"/></svg><svg class="ic ic-r" width="26" height="26"><use href="#n-acerca-r"/></svg></span><span class="nav-txt">Acerca de</span></button>
+      </div>
+    </div>
+    <!-- 22/11/2026 (modelo aprobado por Darío): Doc Dai, el botón de voz, en el centro del menú -->
+    <button type="button" class="dai" data-voz="abrir" aria-label="Hablar con Doc Dai"><span class="orbe"><span class="ondas"><i></i><i></i><i></i></span><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg><span class="barras"><b></b><b></b><b></b><b></b><b></b></span><span class="chispa"></span></span><span class="txt">Doc Dai</span></button>
   </nav>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=11"></script>
+<script src="config.js?v=12"></script>
 <script src="logica.js?v=8"></script>
 <script src="clave.js?v=8"></script>
 <script src="avisos-push.js?v=9"></script>
 <script src="huella.js?v=4"></script>
 <script src="ajustes.js?v=1"></script>
 <script src="app.js?v=24"></script>
-<script src="voz.js?v=5"></script>
+<script src="voz.js?v=6"></script>
 <script src="intro.js?v=8"></script>
 </body>
 </html>

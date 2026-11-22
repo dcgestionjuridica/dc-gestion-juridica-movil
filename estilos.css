@@ -541,3 +541,59 @@ html[data-tema="oscuro"] .cab .cab-btn.voz-mic { border:0; color:#0f2540; }
 .aviso-salir { position:fixed; left:50%; bottom:calc(110px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:80; background:rgba(15,37,64,.94); color:#fff; font-size:14px; font-weight:600; padding:10px 18px; border-radius:22px; box-shadow:0 8px 24px rgba(0,0,0,.3); opacity:0; pointer-events:none; white-space:nowrap; }
 .aviso-salir.ve { animation:aviso-salir 2s ease forwards; }
 @keyframes aviso-salir { 0% { opacity:0; transform:translate(-50%,8px); } 10%,80% { opacity:1; transform:translate(-50%,0); } 100% { opacity:0; } }
+
+/* ---------- 22/11/2026 (modelo aprobado por Darío): menú inferior estilo DC Soporte con Doc Dai (voz) en el centro ---------- */
+nav.nav.dock{position:fixed;left:0;right:0;bottom:0;margin:0;height:auto;padding:0;background:none;border:0;box-shadow:none;border-radius:0;display:block;z-index:30;pointer-events:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+nav.dock .base{pointer-events:auto;position:relative;display:flex;align-items:flex-end;justify-content:space-between;height:80px;padding:0 2px calc(9px + env(safe-area-inset-bottom));
+  background:var(--dock-bg);border-radius:28px 28px 0 0;box-shadow:0 -10px 30px rgba(15,37,64,.13),0 -1px 0 rgba(15,37,64,.05);
+  -webkit-mask:radial-gradient(circle 35px at 50% 14px,transparent 34px,#000 35px);mask:radial-gradient(circle 35px at 50% 14px,transparent 34px,#000 35px)}
+nav.dock .lado{display:flex;flex:1;justify-content:space-around;min-width:0}
+nav.dock .hueco{width:66px;flex:none}
+nav.dock .base button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;color:var(--dock-t);min-width:0;padding:0;position:relative;flex:1}
+nav.dock .base .ic-caja,nav.dock:has(button:nth-child(6)) .base .ic-caja{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;transition:background .25s,transform .25s cubic-bezier(.3,1.6,.5,1);position:relative;transform:none;box-shadow:none;background:none}
+nav.dock .base .ic-caja svg{width:23px;height:23px;grid-area:1/1}
+nav.dock .base .on{color:var(--dock-on);font-weight:800}
+nav.dock .base .on .ic-caja,html[data-tema="oscuro"] nav.dock .base .on .ic-caja{background:linear-gradient(135deg,#1d4f91 0%,#0f2540 100%);color:#ffd36b;transform:none;box-shadow:0 6px 14px rgba(15,37,64,.3)}
+html[data-tema="oscuro"] nav.dock .base .on .ic-caja{background:linear-gradient(135deg,#e7c565 0%,#b8901c 100%);color:#0f2540}
+nav.dock .base button:active .ic-caja{transform:scale(.88)}
+nav.dock .badge-msj{position:absolute;top:-3px;right:-4px}
+:root{--dock-bg:#fff;--dock-t:#5b6478;--dock-on:#0f2540;--dock-pill:#f5ecd2;--dock-anillo:#faf5e8}
+html[data-tema="oscuro"]{--dock-bg:#0f1d38;--dock-t:#9aa6bf;--dock-on:#e9c25a;--dock-pill:rgba(233,194,90,.14);--dock-anillo:#0a1428}
+
+/* --- Doc Dai: el orbe de voz --- */
+.dai{pointer-events:auto;position:absolute;left:50%;bottom:calc(9px + env(safe-area-inset-bottom));transform:translateX(-50%);width:66px;height:84px;background:none;border:0;padding:0;-webkit-tap-highlight-color:transparent}
+.dai .orbe{position:absolute!important;left:12px;top:13px}
+.dai .txt{position:absolute;left:0;right:0;bottom:0;text-align:center}
+.dai .orbe{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#0f2540;
+  background:radial-gradient(circle at 34% 28%,#fff3c4 0,#f1cf6b 22%,#d9a92e 55%,#a87a12 100%);
+  box-shadow:0 0 0 3.5px #0f2540,0 0 0 5px rgba(233,194,90,.85),0 12px 26px rgba(15,37,64,.38),inset 0 -6px 12px rgba(120,80,0,.35),inset 0 4px 8px rgba(255,255,255,.55);
+  transition:transform .45s cubic-bezier(.25,1.8,.45,1),box-shadow .3s;animation:respira 3.2s ease-in-out infinite}
+.dai .orbe::before{content:"";position:absolute;inset:4px 9px auto 9px;height:11px;border-radius:50%;background:linear-gradient(#fff9,transparent);filter:blur(1px)}
+.dai .orbe svg{width:21px;height:21px;position:relative;transition:opacity .2s,transform .3s}
+.dai .ondas{position:absolute;inset:0;pointer-events:none}
+.dai .ondas i{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(233,194,90,.75);opacity:0}
+.dai .barras{position:absolute;display:flex;gap:3px;align-items:center;height:20px;opacity:0;transition:opacity .2s}
+.dai .barras b{width:3px;border-radius:3px;background:#0f2540;height:8px}
+.dai .txt{font:800 9.5px/1 inherit;letter-spacing:.04em;color:var(--dock-on);text-transform:none}
+.dai .txt small{display:block;font-weight:600;font-size:9.5px;color:var(--dock-t);margin-top:2px;letter-spacing:0}
+.dai .chispa{position:absolute;width:6px;height:6px;border-radius:50%;background:#fff6cf;box-shadow:0 0 8px 2px #f1cf6b;top:-2px;right:6px;animation:chispa 3.2s ease-in-out infinite}
+@keyframes respira{0%,100%{box-shadow:0 0 0 3.5px #0f2540,0 0 0 5px rgba(233,194,90,.85),0 12px 26px rgba(15,37,64,.38),0 0 0 0 rgba(233,194,90,0),inset 0 -6px 12px rgba(120,80,0,.35),inset 0 4px 8px rgba(255,255,255,.55)}
+  50%{box-shadow:0 0 0 3.5px #0f2540,0 0 0 5px rgba(233,194,90,1),0 12px 26px rgba(15,37,64,.38),0 0 22px 8px rgba(233,194,90,.45),inset 0 -6px 12px rgba(120,80,0,.35),inset 0 4px 8px rgba(255,255,255,.55)}}
+@keyframes chispa{0%,100%{opacity:0;transform:scale(.4)}45%{opacity:1;transform:scale(1)}60%{opacity:0;transform:scale(.4)}}
+/* Presionado / escuchando: crece un poco (no tanto), salen ondas y el micrófono se vuelve barras de sonido */
+.dai.vivo .orbe{transform:scale(1.18);animation:none;box-shadow:0 0 0 3.5px #0f2540,0 0 0 5.5px #f1cf6b,0 16px 34px rgba(15,37,64,.45),0 0 34px 12px rgba(233,194,90,.55),inset 0 -6px 12px rgba(120,80,0,.35),inset 0 4px 8px rgba(255,255,255,.55)}
+.dai.vivo .orbe>svg{opacity:0;transform:scale(.5)}
+.dai.vivo .barras{opacity:1}
+.dai.vivo .barras b{animation:eq 0.9s ease-in-out infinite}
+.dai.vivo .barras b:nth-child(2){animation-delay:.15s}.dai.vivo .barras b:nth-child(3){animation-delay:.3s}.dai.vivo .barras b:nth-child(4){animation-delay:.45s}.dai.vivo .barras b:nth-child(5){animation-delay:.6s}
+.dai.vivo .ondas i{animation:onda 1.8s ease-out infinite}.dai.vivo .ondas i:nth-child(2){animation-delay:.6s}.dai.vivo .ondas i:nth-child(3){animation-delay:1.2s}
+.dai.vivo .txt{color:#b8901c}
+@keyframes eq{0%,100%{height:5px}50%{height:18px}}
+@keyframes onda{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2.1)}}
+.dai:active .orbe{transform:scale(1.12)}
+@media (prefers-reduced-motion:reduce){.dai .orbe,.dai .chispa{animation:none}}
+.cuerpo{padding-bottom:130px!important}
+nav.dock .base .on .nav-txt,nav.dock .base .nav-txt{margin-top:0}
+nav.dock .base button:active .ic-caja,nav.dock .base .on:active .ic-caja{transform:scale(.88)}
+nav.nav.dock.oculto{display:none}
+.dai .orbe>svg{color:#0f2540}
