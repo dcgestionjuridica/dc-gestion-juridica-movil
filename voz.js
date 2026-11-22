@@ -45,15 +45,18 @@
   }
   try { if ("speechSynthesis" in window) { elegirVoz(); window.speechSynthesis.addEventListener("voiceschanged", elegirVoz); } } catch (e) {}
   function hablar(texto) {
+    let listo = null; const fin = new Promise(r => { listo = r; });
     try {
-      if (!texto || !("speechSynthesis" in window)) return;
+      if (!texto || !("speechSynthesis" in window)) { listo(); return fin; }
       const s = window.speechSynthesis; s.cancel();
       const voz = vozElegida || elegirVoz();
       // Más pausado y un poco más grave suena cálido y menos robótico. Frase por frase, con su pausa natural.
       const limpio = String(texto).replace(/\$\s?/g, "").replace(/\s+/g, " ").trim();
-      const frases = limpio.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/);
-      for (const f of frases) {
-        const t = f.trim(); if (!t) continue;
+      const frases = limpio.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/).filter(f => f.trim());
+      // Por si el navegador no avisa que terminó de hablar.
+      setTimeout(listo, 1500 + limpio.length * 85);
+      frases.forEach((f, i) => {
+        const t = f.trim();
         const u = new SpeechSynthesisUtterance(t);
         if (voz) u.voice = voz;
         u.lang = voz ? voz.lang : "es-CO";
@@ -61,9 +64,12 @@
         u.rate = natural ? 0.95 : 0.9;
         u.pitch = natural ? 1 : 0.94;
         u.volume = 1;
+        if (i === frases.length - 1) { u.onend = () => listo(); u.onerror = () => listo(); }
         s.speak(u);
-      }
-    } catch (e) {}
+      });
+      if (!frases.length) listo();
+    } catch (e) { listo(); }
+    return fin;
   }
   const callar = () => { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} };
 
@@ -84,7 +90,7 @@
   }
 
   // ---------- Escuchar ----------
-  function escuchar(alTexto) {
+  function escuchar(alTexto, alNada) {
     if (!R) { est = { fase: "sinvoz" }; pintar(); return; }
     detener();
     let final = "", ultimo = "";
@@ -94,8 +100,8 @@
       ultimo = t; if (ev.results[ev.results.length - 1].isFinal) final = t;
       const d = $("voz-dicho"); if (d) { d.textContent = "«" + t + "»"; d.classList.remove("oculto"); }
     };
-    rec.onerror = ev => { rec = null; if (ev.error === "not-allowed" || ev.error === "service-not-allowed") { est = { fase: "permiso" }; pintar(); } else if (ev.error === "no-speech") { est = { fase: "escucha", nada: true }; pintar(); } };
-    rec.onend = () => { const t = (final || ultimo).trim(); rec = null; if (t) alTexto(t); else if (est && est.fase === "escucha" && !est.nada) { est.nada = true; pintar(); } };
+    rec.onerror = ev => { rec = null; if (ev.error === "not-allowed" || ev.error === "service-not-allowed") { est = { fase: "permiso" }; pintar(); } else if (ev.error === "no-speech") { if (alNada) alNada(); else { est = { fase: "escucha", nada: true }; pintar(); } } };
+    rec.onend = () => { const t = (final || ultimo).trim(); rec = null; if (t) alTexto(t); else if (alNada) alNada(); else if (est && est.fase === "escucha" && !est.nada) { est.nada = true; pintar(); } };
     try { rec.start(); } catch (e) { rec = null; }
   }
   function detener() { if (rec) { try { rec.onend = null; rec.abort(); } catch (e) {} rec = null; } }
@@ -109,8 +115,8 @@
         const r = await llamar({ paso: "entender", texto });
         est = { fase: "tarjeta", r, elegido: r.candidatos && r.candidatos.length === 1 ? r.candidatos[0].id : null, mensaje: r.mensaje || "", fecha: r.fecha || "", hora: r.hora || "", titulo: "" };
         pintar();
-        if (r.voz) hablar(r.voz);
-        if (r.accion === "mensaje" && est.elegido && !est.mensaje) dictarMensaje();
+        if (r.accion === "mensaje" && est.elegido && !est.mensaje && est.elegido && elegido().portal) { if (r.voz) await hablar(r.voz); if (est && est.r === r) dictarMensaje(); }
+        else preguntarSiNo(r.voz);
       } catch (e) { est = { fase: "error", error: e.message }; pintar(); }
     });
   }
@@ -118,8 +124,63 @@
 
   function dictarMensaje() {
     est.dictando = true; pintar();
-    escuchar(t => { if (!est) return; est.dictando = false; est.mensaje = t; pintar(); });
+    escuchar(t => { if (!est) return; est.dictando = false; est.mensaje = t; pintar(); preguntarSiNo(""); }, () => { if (est) { est.dictando = false; pintar(); } });
   }
+
+  // ---------- Confirmar con la voz: Doc Dai pregunta y basta decir «sí» o «no» ----------
+  const SI = /^(si+|sip|claro|dale|de una|hagale|hazlo|correcto|confirmo|confirmado|afirmativo|listo|ok|okay|por favor|bueno|exacto|eso|cancelalo|cancela|borralo|borra|retiralo|retira|quitalo|anulalo|envialo|envia|adelante)\b/;
+  const NO = /\b(no|nop|negativo|mejor no|todavia no|espera|esperate|deja(lo)?|para|alto|olvidalo|nada)\b/;
+  const normal = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+  const horaDicha = h => { const m = /^(\d{1,2}):(\d{2})/.exec(h || ""); if (!m) return ""; const H = +m[1], M = +m[2], h12 = H % 12 || 12;
+    return (h12 === 1 ? "a la una" : "a las " + h12) + (M ? (M === 30 ? " y media" : ":" + m[2]) : "") + (H < 12 ? " de la mañana" : H < 19 ? " de la tarde" : " de la noche"); };
+  // ¿Qué confirma la tarjeta abierta? Devuelve la pregunta en voz alta y la acción del botón dorado.
+  function queConfirma() {
+    if (!est || est.fase !== "tarjeta" || est.espera || est.enviando) return null;
+    const r = est.r, c = elegido();
+    if (r.accion === "cancelar") {
+      if (!c || (r.que === "cobro" && c.tiene_correo === false)) return null;
+      return { boton: "cancelar", no: "Listo, no cancelé nada.", p: r.que === "mensaje" ? "¿Retiro ese mensaje del portal?" : r.que === "cobro" ? "¿Le envío el aviso al cliente?" : "¿Cancelo " + (c.nombre ? "«" + c.nombre + "»" : "eso") + (c.detalle ? ", " + c.detalle : "") + "?" };
+    }
+    if (r.accion === "cobro") {
+      if (!c || !c.tiene_correo || (!c.vencidas && !c.proxima)) return null;
+      return { boton: "enviar", no: "Listo, no envié nada.", p: "¿Le envío " + (c.vencidas ? "la cuenta de cobro" : "el recordatorio de la cuota") + " a " + c.nombre + "?" };
+    }
+    if (r.accion === "mensaje") {
+      if (!c || !c.portal || est.dictando || !String(est.mensaje || "").trim()) return null;
+      return { boton: "enviar", no: "Listo, no envié nada.", p: "¿Le envío el mensaje a " + c.nombre + "?" };
+    }
+    if (r.accion === "agendar") {
+      if (!est.fecha) return null;
+      const tit = est.titulo || [r.clase, c ? c.nombre : ""].filter(Boolean).join(", ");
+      return { boton: "agendar", no: "Listo, no agendé nada.", p: "¿Agendo " + (tit ? "«" + tit + "» " : "") + "para el " + fechaCorta(est.fecha) + (est.hora ? " " + horaDicha(est.hora) : "") + "?" };
+    }
+    return null;
+  }
+  // Salen los botones y además Doc Dai pregunta: decir «sí» es igual que tocar el botón dorado; «no», igual que «Cancelar».
+  async function preguntarSiNo(antes, intento) {
+    guardarCampos();
+    const q = queConfirma(); if (!q) { if (antes) hablar(antes); return; }
+    const yo = est; detener();
+    yo.siNo = "habla"; pintar();
+    await hablar(intento ? "No le entendí. Diga sí, o no." : [antes || "", q.p, "Diga sí o no."].filter(Boolean).join(" "));
+    if (est !== yo || yo.siNo !== "habla" || yo.espera || yo.enviando) return;
+    yo.siNo = "oye"; pintar();
+    escuchar(t => {
+      if (est !== yo || yo.siNo !== "oye") return;
+      const n = normal(t);
+      const dijoSi = !/^no\b/.test(n) && SI.test(n), dijoNo = !dijoSi && NO.test(n);
+      if (dijoNo) { yo.siNo = null; est = { fase: "listo", texto: q.no }; pintar(); hablar(q.no); }
+      else if (dijoSi) { yo.siNo = null; confirmar(q.boton); }
+      else if (!intento) preguntarSiNo("", true);
+      else { yo.siNo = "tocar"; pintar(); hablar("Toque el botón, por favor."); }
+    }, () => {
+      if (est !== yo || yo.siNo !== "oye") return;
+      if (!intento) preguntarSiNo("", true); else { yo.siNo = "tocar"; pintar(); }
+    });
+  }
+  const indicadorSiNo = () => !est.siNo || est.espera || est.enviando ? "" : est.siNo === "tocar"
+    ? '<div class="voz-sino">No le escuché. Use los botones de abajo. <button type="button" class="voz-sino-otra" data-voz="sino">' + MIC + ' Volver a escuchar</button></div>'
+    : '<div class="voz-sino' + (est.siNo === "oye" ? " oye" : "") + '"><span class="voz-sino-mic">' + MIC + '</span><span class="crece">' + (est.siNo === "oye" ? "Le escucho… diga <b>«sí»</b> o <b>«no»</b>" : "Doc Dai le pregunta en voz alta…") + '<small id="voz-dicho" class="oculto"></small></span></div>';
 
   // ---------- Pintar ----------
   function cabeza(t, sub) {
@@ -127,9 +188,9 @@
   }
   const ayudaHtml = () => '<div class="voz-ayuda">Puede decir, por ejemplo:' + AYUDA.map(a => "<b>• " + esc(a) + "</b>").join("") + "</div>";
   const onda = () => '<div class="voz-onda">' + [14, 30, 48, 26, 54, 36, 18, 42, 24, 12].map((h, i) => '<i style="height:' + h + "px;animation-delay:" + (i * 0.08) + 's"></i>').join("") + "</div>";
-  const botones = (no, si, dSi) => est.espera > 0
+  const botones = (no, si, dSi) => (si && est.fase === "tarjeta" ? indicadorSiNo() : "") + (est.espera > 0
     ? '<div class="voz-bts"><button type="button" class="voz-b1" data-voz="deshacer">Deshacer · se hace en ' + est.espera + "</button></div>"
-    : '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">' + esc(no) + "</button>" + (si ? '<button type="button" class="voz-b1" data-voz="' + dSi + '"' + (est.enviando ? " disabled" : "") + ">" + esc(est.enviando ? "Un momento…" : si) + "</button>" : "") + "</div>";
+    : '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">' + esc(no) + "</button>" + (si ? '<button type="button" class="voz-b1" data-voz="' + dSi + '"' + (est.enviando ? " disabled" : "") + ">" + esc(est.enviando ? "Un momento…" : si) + "</button>" : "") + "</div>");
   function elegir(lista, sub) {
     if (!lista.length) return '<div class="voz-aviso">No encontré un cliente con ese nombre. Toque «Otra vez» y dígalo con nombre y apellido.</div>';
     if (lista.length === 1) return "";
@@ -227,7 +288,7 @@
     if (est.fase === "como") return cabeza("¿Cómo funciona?", "Órdenes de voz con Doc Dai") + '<div class="voz-como-txt">' +
       "<p><b>1.</b> Toque el micrófono dorado de arriba y diga la orden con calma.</p>" +
       "<p><b>2.</b> Doc Dai entiende lo que pidió y le muestra una tarjeta con los datos. Si hay clientes con nombres parecidos, usted elige a cuál.</p>" +
-      "<p><b>3.</b> <b>Nada se envía</b> hasta que usted toque «Sí, enviar» o «Sí, agendar», y aun así tiene 5 segundos para tocar «Deshacer».</p>" +
+      "<p><b>3.</b> Doc Dai le pregunta en voz alta si lo hace. Puede contestar <b>«sí»</b> o <b>«no»</b> con la voz, o tocar el botón: es lo mismo. <b>Nada se envía</b> sin su sí, y aun así tiene 5 segundos para tocar «Deshacer».</p>" +
       "<p><b>Órdenes:</b> enviar la cuenta de cobro (si no tiene cuotas vencidas, va el recordatorio de la próxima), enviar un mensaje al portal del cliente, agendar tareas, recordatorios, audiencias o citas, preguntar qué tiene para un día y cuánto debe un cliente. <b>Todo se puede cancelar:</b> «cancela la tarea de mañana», «borra el mensaje que le mandé a…» (hasta 24 horas), «anula el cobro de…» (como el correo ya salió, se le envía al cliente un aviso de que no lo tenga en cuenta) o «deshaz lo último».</p>" +
       "<p>El navegador convierte su voz en texto con su dictado (Google en Chrome, Microsoft en Edge), igual que el micrófono de Doc Dai. Después, la orden se entiende en el servidor del despacho, sin inteligencia artificial externa. Es gratis.</p></div>" +
       '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">Cerrar</button><button type="button" class="voz-b1" data-voz="otra">Dar una orden</button></div>';
@@ -265,6 +326,7 @@
 
   async function confirmar(accion) {
     guardarCampos();
+    if (est && est.siNo) { est.siNo = null; detener(); callar(); }
     const c = elegido();
     if (accion !== "agendar" && !c) return;
     let cuerpo = { paso: "ejecutar", accion: accion === "enviar" ? est.r.accion : "agendar", cliente_id: c ? c.id : null };
@@ -294,7 +356,7 @@
   document.addEventListener("click", ev => {
     const b = ev.target.closest && ev.target.closest("[data-voz],[data-voz-cli]");
     if (!b) return;
-    if (b.dataset.vozCli) { guardarCampos(); est.elegido = Number(b.dataset.vozCli); pintar(); if (est.r.accion === "mensaje" && !est.mensaje && elegido() && elegido().portal) dictarMensaje(); return; }
+    if (b.dataset.vozCli) { guardarCampos(); est.elegido = Number(b.dataset.vozCli); pintar(); if (est.r.accion === "mensaje" && !est.mensaje && elegido() && elegido().portal) dictarMensaje(); else preguntarSiNo(""); return; }
     const a = b.dataset.voz;
     if (a === "abrir" || a === "otra") abrir();
     else if (a === "cerrar" || (a === "fuera" && est && est.fase !== "tarjeta")) { if (reloj) { clearInterval(reloj); reloj = null; } cerrar(); }
@@ -304,6 +366,7 @@
     else if (a === "agendar") confirmar("agendar");
     else if (a === "cancelar") confirmar("cancelar");
     else if (a === "deshacer") deshacer();
+    else if (a === "sino") preguntarSiNo("");
     else if (a === "agenda") { cerrar(); const n = document.querySelector('.nav [data-vista="agenda"]'); if (n) n.click(); }
   });
 
