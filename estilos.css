@@ -604,3 +604,7 @@ nav.nav.dock.oculto{display:none}
 .voz-puntos div:last-child { border-bottom:0; }
 .voz-hablar { display:inline-flex; align-items:center; justify-content:center; gap:6px; }
 .voz-hablar svg { width:18px; height:18px; }
+
+/* 22/11/2026 (Darío): sin parpadeos. Al cambiar el contenido la hoja no se vuelve a animar. Contador pequeño en un círculo, abajo en la esquina. */
+.hoja-a.quieta, .quieta { animation:none !important; }
+.voz-cuenta { display:block; margin:10px 2px 0 auto; width:26px; height:26px; border-radius:50%; border:2px solid #d9b54a; color:var(--acento); font-size:13px; font-weight:800; line-height:22px; text-align:center; background:var(--sup); }

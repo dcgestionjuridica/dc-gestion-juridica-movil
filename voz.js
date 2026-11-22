@@ -195,7 +195,7 @@
   const ayudaHtml = () => '<div class="voz-ayuda">Puede decir, por ejemplo:' + AYUDA.map(a => "<b>• " + esc(a) + "</b>").join("") + "</div>";
   const onda = () => '<div class="voz-onda">' + [14, 30, 48, 26, 54, 36, 18, 42, 24, 12].map((h, i) => '<i style="height:' + h + "px;animation-delay:" + (i * 0.08) + 's"></i>').join("") + "</div>";
   const botones = (no, si, dSi) => (si && est.fase === "tarjeta" ? indicadorSiNo() : "") + (est.espera > 0
-    ? '<div class="voz-bts"><button type="button" class="voz-b1" data-voz="deshacer">Deshacer · se hace en ' + est.espera + "</button></div>"
+    ? '<div class="voz-bts"><button type="button" class="voz-b1" data-voz="deshacer">Deshacer</button></div><span id="voz-cuenta" class="voz-cuenta" aria-label="Segundos para hacerlo">' + est.espera + "</span>"
     : '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">' + esc(no) + "</button>" + (si ? '<button type="button" class="voz-b1" data-voz="' + dSi + '"' + (est.enviando ? " disabled" : "") + ">" + esc(est.enviando ? "Un momento…" : si) + "</button>" : "") + "</div>");
   function elegir(lista, sub) {
     if (!lista.length) return '<div class="voz-aviso">No encontré un cliente con ese nombre. Toque «Otra vez» y dígalo con nombre y apellido.</div>';
@@ -319,7 +319,14 @@
     // Se guardan los campos que el abogado esté escribiendo antes de volver a pintar.
     guardarCampos();
     caja.className = opciones ? "voz-propio" + (opciones.oscuro ? " voz-oscuro" : "") : "";
-    caja.innerHTML = '<div class="hoja-velo" data-voz="fuera"></div><div class="hoja-a voz-hoja" role="dialog" aria-label="Órdenes de voz"><div class="hoja-asa"></div>' + cuerpo() + "</div>";
+    // 22/11/2026 (Darío): NADA de parpadeos. La hoja y el velo se crean una sola vez (con su entrada suave);
+    // después solo se cambia el contenido de adentro, sin volver a animar ni a pintar el fondo.
+    let hoja = caja.querySelector(".hoja-a");
+    if (!hoja) {
+      caja.innerHTML = '<div class="hoja-velo" data-voz="fuera"></div><div class="hoja-a voz-hoja" role="dialog" aria-label="Órdenes de voz"></div>';
+      hoja = caja.querySelector(".hoja-a");
+    } else hoja.classList.add("quieta");
+    hoja.innerHTML = '<div class="hoja-asa"></div>' + cuerpo();
   }
   function guardarCampos() {
     if (!est) return;
@@ -335,7 +342,8 @@
     est.espera = 5; pintar();
     reloj = setInterval(() => {
       if (!est || !est.espera) { clearInterval(reloj); reloj = null; return; }
-      est.espera--; if (est.espera > 0) { pintar(); return; }
+      // Solo cambia el número del círculo: no se vuelve a pintar la hoja (sin parpadeo).
+      est.espera--; if (est.espera > 0) { const c = $("voz-cuenta"); if (c) c.textContent = est.espera; else pintar(); return; }
       clearInterval(reloj); reloj = null; fn();
     }, 1000);
   }
