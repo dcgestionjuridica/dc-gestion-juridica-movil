@@ -156,7 +156,7 @@
       agenda: ["Agenda", "Próximos 30 días"],
       procesos: ["Procesos", "Radicados vigilados en la Rama Judicial"],
       mensajes: ["Mensajes de clientes", "Desde el portal del cliente"],
-      acerca: ["Acerca de", "DC Gestión Jurídica"]
+      acerca: ["Acerca de", "Móvil C&R"]
     };
     const q = norm($("buscar").value.trim());
     $("titulo").textContent = q.length >= 2 ? "Resultados" : encabezados[vista][0];
@@ -179,7 +179,7 @@
     return dia + " " + d.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Bogota" });
   }
   function vistaAcerca() {
-    return '<div class="acerca"><div class="acerca-logo">DC</div><div class="acerca-t">DC Gestión Jurídica</div><div class="acerca-s">Carvajal &amp; Rivera Abogados Asociados</div><div class="acerca-c"><b>¿Para qué sirve?</b>Su despacho en el bolsillo: consulta sus procesos, vencimientos y agenda, y atiende a sus clientes desde el celular.</div><div class="acerca-c"><b>¿Cómo se usa?</b><ul><li><span class="num">1</span>Inicio: lo urgente del día.</li><li><span class="num">2</span>Pendientes y Agenda: términos y citas.</li><li><span class="num">3</span>Mensajes: responda a sus clientes.</li></ul></div><div class="acerca-ver"><b>Versión ' + esc(window.DC_VERSION || "") + '</b>Aplicación web del celular</div></div>';
+    return '<div class="acerca"><div class="acerca-logo">DC</div><div class="acerca-t">Móvil C&amp;R</div><div class="acerca-s">Carvajal &amp; Rivera Abogados Asociados</div><div class="acerca-c"><b>¿Para qué sirve?</b>Su despacho en el bolsillo: consulta sus procesos, vencimientos y agenda, y atiende a sus clientes desde el celular.</div><div class="acerca-c"><b>¿Cómo se usa?</b><ul><li><span class="num">1</span>Inicio: lo urgente del día.</li><li><span class="num">2</span>Pendientes y Agenda: términos y citas.</li><li><span class="num">3</span>Mensajes: responda a sus clientes.</li></ul></div><div class="acerca-ver"><b>Versión ' + esc(window.DC_VERSION || "") + '</b>Aplicación web del celular</div></div>';
   }
   function vistaMensajes() {
     if (mensajes.abierto) {

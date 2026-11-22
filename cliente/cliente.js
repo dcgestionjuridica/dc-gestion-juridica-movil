@@ -210,7 +210,7 @@
       $("titulo").textContent = "Acerca de";
       $("subtitulo").textContent = "Su portal del cliente";
       $("subtitulo").classList.remove("dos");
-      $("cuerpo").innerHTML = '<div class="acerca"><div class="acerca-logo">DC</div><div class="acerca-t">Su portal del cliente</div><div class="acerca-s">Carvajal &amp; Rivera Abogados Asociados</div><div class="acerca-c"><b>¿Para qué sirve?</b>Siga su caso sin llamar: vea cómo va su proceso, cuánto ha pagado y escríbale a su abogado.</div><div class="acerca-c"><b>¿Cómo se usa?</b><ul><li><span class="num">1</span>Mi proceso: el estado de su caso.</li><li><span class="num">2</span>Mis pagos: cuotas y recibos.</li><li><span class="num">3</span>Tengo una duda: elija a su abogado y escríbale.</li></ul></div><div class="acerca-ver"><b>Versión ' + esc(window.DC_VERSION || "") + '</b>Portal del cliente</div></div>';
+      $("cuerpo").innerHTML = '<div class="acerca"><div class="acerca-logo">DC</div><div class="acerca-t">Mi Proceso C&amp;R</div><div class="acerca-s">Carvajal &amp; Rivera Abogados Asociados</div><div class="acerca-c"><b>¿Para qué sirve?</b>Siga su caso sin llamar: vea cómo va su proceso, cuánto ha pagado y escríbale a su abogado.</div><div class="acerca-c"><b>¿Cómo se usa?</b><ul><li><span class="num">1</span>Mi proceso: el estado de su caso.</li><li><span class="num">2</span>Mis pagos: cuotas y recibos.</li><li><span class="num">3</span>Tengo una duda: elija a su abogado y escríbale.</li></ul></div><div class="acerca-ver"><b>Versión ' + esc(window.DC_VERSION || "") + '</b>Portal del cliente</div></div>';
       $("cuerpo").scrollTop = 0;
       return;
     }
