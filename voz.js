@@ -36,13 +36,16 @@
   const callar = () => { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} };
 
   // ---------- Servidor ----------
+  // En la web liviana la sesión es la de DC_SB; en la app completa la pasa la app al abrir (opciones).
+  let opciones = null;
   async function llamar(cuerpo) {
-    const sb = window.DC_SB;
-    const { data } = await sb.auth.getSession();
-    const token = data && data.session && data.session.access_token;
+    let token = opciones && opciones.token;
+    if (!token && window.DC_SB) { const { data } = await window.DC_SB.auth.getSession(); token = data && data.session && data.session.access_token; }
     if (!token) throw new Error("Su sesión se cerró. Vuelva a entrar.");
-    const r = await fetch(cfg.url + "/functions/v1/ordenes-voz", { method: "POST",
-      headers: { Authorization: "Bearer " + token, apikey: cfg.clavePublica, "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) });
+    const url = (opciones && opciones.url) || cfg.url, clave = (opciones && opciones.clave) || cfg.clavePublica;
+    const h = { Authorization: "Bearer " + token, apikey: clave, "Content-Type": "application/json" };
+    if (opciones && opciones.version) h["x-dc-version"] = opciones.version;
+    const r = await fetch(url + "/functions/v1/ordenes-voz", { method: "POST", headers: h, body: JSON.stringify(cuerpo) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j.error) throw new Error(j.error || "No se pudo conectar con el servidor.");
     return j;
@@ -109,7 +112,7 @@
     if (r.accion === "agenda_dia") {
       return cabeza(String(r.titulo || "").replace(/ de \d{4}$/, ""), "Doc Dai también se lo lee en voz alta") + '<div class="voz-tarj">' + (r.eventos.length ? r.eventos.map(e =>
         '<div class="voz-ev"><span class="voz-hora">' + esc(e.hora) + '</span><span class="crece">' + esc(e.titulo) + (e.detalle ? "<small>" + esc(e.detalle) + "</small>" : "") + "</span></div>").join("") : '<div class="voz-vacio">No hay nada en la agenda para ese día.</div>') + "</div>" +
-        '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">Cerrar</button><button type="button" class="voz-b1" data-voz="agenda">Abrir la Agenda</button></div>';
+        '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">Cerrar</button>' + (document.querySelector('.nav [data-vista="agenda"]') ? '<button type="button" class="voz-b1" data-voz="agenda">Abrir la Agenda</button>' : '<button type="button" class="voz-b1" data-voz="otra">Otra orden</button>') + "</div>";
     }
     if (r.accion === "deuda") {
       let h = cabeza("¿Cuánto debe?", "Entendí: «" + r.entendi + "»") + elegir(lista, x => x.correo || "");
@@ -176,7 +179,7 @@
       "<p><b>2.</b> Doc Dai entiende lo que pidió y le muestra una tarjeta con los datos. Si hay clientes con nombres parecidos, usted elige a cuál.</p>" +
       "<p><b>3.</b> <b>Nada se envía</b> hasta que usted toque «Sí, enviar» o «Sí, agendar».</p>" +
       "<p><b>Órdenes:</b> enviar la cuenta de cobro (si no tiene cuotas vencidas, va el recordatorio de la próxima), enviar un mensaje al portal del cliente, agendar una audiencia o cita, preguntar qué tiene para un día y cuánto debe un cliente.</p>" +
-      "<p>Los nombres de los clientes no se envían a ninguna empresa externa: la orden se entiende en el servidor del despacho. Es gratis y funciona en Chrome y Edge.</p></div>" +
+      "<p>El navegador convierte su voz en texto con su dictado (Google en Chrome, Microsoft en Edge), igual que el micrófono de Doc Dai. Después, la orden se entiende en el servidor del despacho, sin inteligencia artificial externa. Es gratis.</p></div>" +
       '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">Cerrar</button><button type="button" class="voz-b1" data-voz="otra">Dar una orden</button></div>';
     if (est.fase === "tarjeta") return tarjeta();
     return "";
@@ -187,6 +190,7 @@
     if (!caja) { caja = document.createElement("div"); caja.id = "voz-hoja"; document.body.appendChild(caja); }
     // Se guardan los campos que el abogado esté escribiendo antes de volver a pintar.
     guardarCampos();
+    caja.className = opciones ? "voz-propio" + (opciones.oscuro ? " voz-oscuro" : "") : "";
     caja.innerHTML = '<div class="hoja-velo" data-voz="fuera"></div><div class="hoja-a voz-hoja" role="dialog" aria-label="Órdenes de voz"><div class="hoja-asa"></div>' + cuerpo() + "</div>";
   }
   function guardarCampos() {
@@ -212,7 +216,7 @@
     try {
       const r = await llamar(cuerpo);
       est = { fase: "listo", texto: r.mensaje }; pintar(); hablar(r.mensaje);
-      if (cuerpo.accion === "agendar" || cuerpo.accion === "mensaje") document.dispatchEvent(new CustomEvent("dc-voz-cambio"));
+      if (cuerpo.accion === "agendar" || cuerpo.accion === "mensaje") { document.dispatchEvent(new CustomEvent("dc-voz-cambio")); try { window.DC_VOZ_CAMBIO && window.DC_VOZ_CAMBIO(); } catch (e) {} }
     } catch (e) { est.enviando = false; est.errorEnvio = e.message; pintar(); alertaError(e.message); }
   }
   function alertaError(m) {
@@ -242,4 +246,6 @@
     b.innerHTML = MIC; ref.parentNode.insertBefore(b, ref);
   }
   ponerBoton();
+  // App completa (Compose): la cabecera llama window.DC_VOZ.abrir({ url, clave, token, version, oscuro }).
+  window.DC_VOZ = { abrir: o => { opciones = o || null; abrir(); } };
 })();
