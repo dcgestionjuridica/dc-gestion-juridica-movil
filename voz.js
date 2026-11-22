@@ -19,18 +19,50 @@
   let rec = null;        // reconocimiento en curso
 
   // ---------- Voz de Doc Dai (femenina latina, igual que en la app completa) ----------
+  // Voz de Doc Dai: la mejor voz femenina latina que tenga el celular o el computador (gratis, nada sale del equipo).
+  // Prefiere voces «naturales», «mejoradas» o «premium» y de Colombia/México/EE. UU.; nunca de hombre ni de España.
+  const MUJERES = /(salom|dalia|paloma|elena|sabina|paulina|marisol|camila|ximena|valentina|catalina|luciana|renata|larissa|lupe|penelope|penélope|mia|sof[ií]a|isabela|gabriela|andrea|carolina|beatriz|esc|esf)/i;
+  const HOMBRES = /(jorge|pablo|raul|raúl|alvaro|álvaro|diego|enrique|carlos|juan|andres|andrés|gonzalo|tomas|tomás|miguel|antonio|jose|josé|emilio|lorenzo|gerardo|federico|alonso|esd|\bmale\b|hombre)/i;
+  let vozElegida = null;
+  function puntaje(v) {
+    const n = v.name || "", l = (v.lang || "").toLowerCase().replace("_", "-");
+    if (!l.startsWith("es") || HOMBRES.test(n)) return -1;
+    let p = 0;
+    if (/natural|neural|online|premium|enhanced|mejorad|network/i.test(n)) p += 50;
+    if (MUJERES.test(n)) p += 20;
+    if (l === "es-co") p += 18; else if (l === "es-mx") p += 15; else if (l === "es-us" || l === "es-419") p += 13; else if (l !== "es-es") p += 8;
+    if (l === "es-es") p -= 10;
+    if (/google/i.test(n)) p += 6;
+    if (/compact|eloquence|grandma|grandpa|abuel/i.test(n)) p -= 30;
+    return p;
+  }
+  function elegirVoz() {
+    try {
+      const vs = window.speechSynthesis.getVoices().map(v => [puntaje(v), v]).filter(x => x[0] >= 0).sort((a, b) => b[0] - a[0]);
+      if (vs.length) vozElegida = vs[0][1];
+    } catch (e) {}
+    return vozElegida;
+  }
+  try { if ("speechSynthesis" in window) { elegirVoz(); window.speechSynthesis.addEventListener("voiceschanged", elegirVoz); } } catch (e) {}
   function hablar(texto) {
     try {
       if (!texto || !("speechSynthesis" in window)) return;
       const s = window.speechSynthesis; s.cancel();
-      const voces = s.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith("es"));
-      const hombres = /(jorge|pablo|raul|raúl|alvaro|álvaro|diego|enrique|carlos|juan|andres|andrés|gonzalo|tomas|tomás|miguel|antonio|jose|josé|emilio|lorenzo|gerardo|federico)/i;
-      const voz = voces.find(v => /natural|online/i.test(v.name) && !/es-es/i.test(v.lang) && !hombres.test(v.name))
-        || voces.find(v => /google/i.test(v.name) && /es-us|es-419|es-mx/i.test(v.lang))
-        || voces.find(v => !/es-es/i.test(v.lang) && !hombres.test(v.name)) || voces[0];
-      const u = new SpeechSynthesisUtterance(texto);
-      if (voz) u.voice = voz; u.lang = voz ? voz.lang : "es-CO"; u.rate = 0.98; u.pitch = 1.04;
-      s.speak(u);
+      const voz = vozElegida || elegirVoz();
+      // Más pausado y un poco más grave suena cálido y menos robótico. Frase por frase, con su pausa natural.
+      const limpio = String(texto).replace(/\$\s?/g, "").replace(/\s+/g, " ").trim();
+      const frases = limpio.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/);
+      for (const f of frases) {
+        const t = f.trim(); if (!t) continue;
+        const u = new SpeechSynthesisUtterance(t);
+        if (voz) u.voice = voz;
+        u.lang = voz ? voz.lang : "es-CO";
+        const natural = voz && /natural|neural|online|premium|enhanced|mejorad|network/i.test(voz.name);
+        u.rate = natural ? 0.95 : 0.9;
+        u.pitch = natural ? 1 : 0.94;
+        u.volume = 1;
+        s.speak(u);
+      }
     } catch (e) {}
   }
   const callar = () => { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} };
