@@ -472,3 +472,54 @@ html[data-tema="oscuro"] .hoja-a { background:#13243d; }
 .cab .t small.dos { line-height:1.1; margin-top:1px; }
 .cab .cab-btn { width:40px; height:40px; margin-left:2px; border-radius:13px; flex:none; }
 .cab .cab-btn svg { width:22px; height:22px; }
+
+/* ---------- Órdenes de voz con Doc Dai (22/11/2026, modelo aprobado) ---------- */
+.cab .cab-btn.voz-mic { background:linear-gradient(135deg,#d9b54a,#b8901c); color:#fff; border:0; box-shadow:0 0 0 4px rgba(217,181,74,.25); }
+html[data-tema="oscuro"] .cab .cab-btn.voz-mic { border:0; color:#0f2540; }
+.voz-hoja { max-height:88vh; overflow-y:auto; }
+.voz-dai { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.voz-dai b { display:block; font-size:16px; color:var(--texto); }
+.voz-dai small { display:block; font-size:12.5px; color:var(--texto2); }
+.voz-f { flex:none; width:40px; height:40px; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:13px; background:linear-gradient(135deg,#d9b54a,#f0d68f); color:#0f2540; }
+.voz-como { flex:none; width:32px; height:32px; border-radius:50%; border:1px solid var(--linea); background:none; color:var(--texto2); font:inherit; font-weight:800; cursor:pointer; }
+.voz-onda { display:flex; gap:5px; justify-content:center; align-items:center; height:62px; margin:4px 0 10px; }
+.voz-onda i { display:block; width:6px; border-radius:3px; background:#d9b54a; animation:voz-onda 1s ease-in-out infinite alternate; }
+@keyframes voz-onda { from { transform:scaleY(.35); } to { transform:scaleY(1); } }
+.voz-dicho { background:var(--oro); color:var(--oro-txt); border-radius:12px; padding:12px 14px; font-size:16px; font-style:italic; margin-bottom:12px; }
+.voz-ayuda { font-size:13px; color:var(--texto2); line-height:1.55; }
+.voz-ayuda b { display:block; color:var(--texto); font-weight:600; }
+.voz-tarj { border:1px solid var(--linea); border-radius:14px; padding:12px 14px; margin-bottom:12px; }
+.voz-etq { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--acento); margin-bottom:6px; }
+.voz-dato { display:flex; justify-content:space-between; gap:12px; font-size:14px; padding:6px 0; border-bottom:1px dashed var(--linea); color:var(--texto); }
+.voz-dato:last-child { border-bottom:0; }
+.voz-dato span { color:var(--texto2); white-space:nowrap; }
+.voz-dato b { text-align:right; }
+.voz-dato b.rojo { color:var(--rojo-txt); }
+.voz-op { display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1.5px solid var(--linea); border-radius:12px; padding:10px 12px; margin-bottom:8px; background:none; font:inherit; font-size:14.5px; font-weight:600; color:var(--texto); cursor:pointer; }
+.voz-op small { display:block; font-weight:400; font-size:12.5px; color:var(--texto2); }
+.voz-op.sel { border-color:#d9b54a; background:var(--oro); }
+.voz-rad { flex:none; width:18px; height:18px; border-radius:50%; border:2px solid var(--texto2); }
+.voz-op.sel .voz-rad { border:5px solid #b8901c; }
+.voz-aviso { background:var(--oro); color:var(--oro-txt); border-left:4px solid #d9b54a; border-radius:8px; padding:9px 11px; font-size:13px; margin-bottom:12px; }
+.voz-aviso.rojo { background:var(--rojo); color:var(--rojo-txt); border-left-color:var(--rojo-txt); }
+.voz-bts { display:flex; gap:10px; margin-top:4px; }
+.voz-bts button { flex:1; height:48px; border-radius:12px; border:0; font:inherit; font-weight:700; font-size:15px; cursor:pointer; }
+.voz-b1 { background:linear-gradient(135deg,#d9b54a,#b8901c); color:#fff; }
+.voz-b1:disabled { opacity:.6; }
+.voz-b2 { background:var(--sup2); color:var(--texto); }
+.voz-ev { display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--linea); font-size:14px; color:var(--texto); }
+.voz-ev:last-child { border-bottom:0; }
+.voz-ev small { display:block; color:var(--texto2); font-size:12.5px; }
+.voz-hora { flex:none; width:88px; font-weight:700; color:var(--acento); white-space:nowrap; }
+.voz-vacio { color:var(--texto2); font-size:14px; padding:8px 0; }
+.voz-txt, .voz-campo input { width:100%; box-sizing:border-box; border:1px solid var(--linea); border-radius:10px; padding:10px 12px; font:inherit; font-size:15px; background:var(--sup); color:var(--texto); resize:vertical; }
+.voz-campo { display:block; font-size:12.5px; color:var(--texto2); margin:6px 0; }
+.voz-campo input { margin-top:4px; height:44px; }
+.voz-fila2 { display:flex; gap:10px; } .voz-fila2 .voz-campo { flex:1; }
+.voz-dictar { display:flex; align-items:center; gap:8px; margin-top:8px; border:1px solid #d9b54a; background:none; color:var(--acento); border-radius:10px; padding:8px 12px; font:inherit; font-weight:700; font-size:14px; cursor:pointer; }
+.voz-ok { background:var(--verde); color:var(--verde-txt); border-radius:12px; padding:14px; font-size:15px; margin-bottom:12px; }
+.voz-cargando { display:flex; gap:8px; justify-content:center; padding:14px 0 6px; }
+.voz-cargando i { width:10px; height:10px; border-radius:50%; background:#d9b54a; animation:voz-p 1s infinite ease-in-out; }
+.voz-cargando i:nth-child(2) { animation-delay:.15s; } .voz-cargando i:nth-child(3) { animation-delay:.3s; }
+@keyframes voz-p { 0%,100% { opacity:.3; transform:scale(.8); } 50% { opacity:1; transform:scale(1); } }
+.voz-como-txt p { margin:0 0 10px; font-size:14px; line-height:1.55; color:var(--texto); }

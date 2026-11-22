@@ -7,6 +7,7 @@
   const PORTAL = "https://consultaprocesos.ramajudicial.gov.co/Procesos/NumeroRadicacion";
 
   const sb = window.supabase.createClient(cfg.url, cfg.clavePublica, { auth: { persistSession: true, autoRefreshToken: true } });
+  window.DC_SB = sb; // 22/11/2026: lo usan las órdenes de voz (voz.js) con la misma sesión.
   let datos = null;
   let cargadoEn = 0;
   let vista = "inicio";
@@ -84,6 +85,8 @@
     mostrarEntrada("");
   });
   $("btn-actualizar").addEventListener("click", () => cargar());
+  // Después de agendar o enviar un mensaje por voz, se vuelven a leer los datos.
+  document.addEventListener("dc-voz-cambio", () => { if (datos) cargar(); });
 
   // ---------- Datos ----------
   async function leer(consulta) {
