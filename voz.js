@@ -12,7 +12,7 @@
   const fechaCorta = f => { if (!/^\d{4}-\d{2}-\d{2}/.test(f || "")) return ""; const t = new Date(f.slice(0, 10) + "T12:00:00Z"); return DIAS[t.getUTCDay()] + " " + t.getUTCDate() + " de " + MESES[t.getUTCMonth()]; };
   const horaBonita = h => { const m = /^(\d{1,2}):(\d{2})/.exec(h || ""); if (!m) return ""; let x = +m[1]; const pm = x >= 12; x = x % 12 || 12; return x + ":" + m[2] + (pm ? " p. m." : " a. m."); };
   const R = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const AYUDA = ["Envía la cuenta de cobro a…", "Envía un mensaje a…", "¿Qué tengo para mañana?", "Agéndame la audiencia de… el martes a las 9", "¿Cuánto debe…?"];
+  const AYUDA = ["Envía la cuenta de cobro a…", "Envía un mensaje a…", "¿Qué tengo para mañana?", "Agéndame una tarea de… mañana a las 9", "¿Cuánto debe…?", "Cancela… (lo agendado, un mensaje o un cobro)"];
   const MIC = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg>';
 
   let est = null;        // estado de la hoja
@@ -127,7 +127,9 @@
   }
   const ayudaHtml = () => '<div class="voz-ayuda">Puede decir, por ejemplo:' + AYUDA.map(a => "<b>• " + esc(a) + "</b>").join("") + "</div>";
   const onda = () => '<div class="voz-onda">' + [14, 30, 48, 26, 54, 36, 18, 42, 24, 12].map((h, i) => '<i style="height:' + h + "px;animation-delay:" + (i * 0.08) + 's"></i>').join("") + "</div>";
-  const botones = (no, si, dSi) => '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">' + esc(no) + "</button>" + (si ? '<button type="button" class="voz-b1" data-voz="' + dSi + '"' + (est.enviando ? " disabled" : "") + ">" + esc(est.enviando ? "Enviando…" : si) + "</button>" : "") + "</div>";
+  const botones = (no, si, dSi) => est.espera > 0
+    ? '<div class="voz-bts"><button type="button" class="voz-b1" data-voz="deshacer">Deshacer · se hace en ' + est.espera + "</button></div>"
+    : '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">' + esc(no) + "</button>" + (si ? '<button type="button" class="voz-b1" data-voz="' + dSi + '"' + (est.enviando ? " disabled" : "") + ">" + esc(est.enviando ? "Un momento…" : si) + "</button>" : "") + "</div>";
   function elegir(lista, sub) {
     if (!lista.length) return '<div class="voz-aviso">No encontré un cliente con ese nombre. Toque «Otra vez» y dígalo con nombre y apellido.</div>';
     if (lista.length === 1) return "";
@@ -194,6 +196,22 @@
         '<div class="voz-aviso">Puede corregir cualquier dato antes de guardar. También queda en su Google Calendar.</div>';
       return h + botones("Cancelar", "Sí, agendar", "agendar");
     }
+    if (r.accion === "cancelar") {
+      let h = cabeza(r.titulo || "Cancelar", r.dicho ? "Entendí: «" + r.dicho + "»" : "");
+      if (!lista.length) return h + '<div class="voz-aviso">' + esc(r.voz || "No encontré nada que cancelar.") + "</div>" + '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">Cerrar</button><button type="button" class="voz-b1" data-voz="otra">Otra vez</button></div>';
+      const etq = r.que === "mensaje" ? "Mensaje que se retira del portal" : r.que === "cobro" ? "Cliente" : "Lo que se quita de la agenda";
+      if (lista.length > 1) h += '<div class="voz-aviso">Encontré ' + lista.length + " opciones. Elija cuál:</div>" + lista.map(x =>
+        '<button type="button" class="voz-op' + (est.elegido === x.id ? " sel" : "") + '" data-voz-cli="' + x.id + '"><span class="voz-rad"></span><span class="crece">' + esc(x.nombre) + "<small>" + esc(x.detalle || "") + "</small></span></button>").join("");
+      if (c) {
+        h += '<div class="voz-tarj"><div class="voz-etq">' + etq + "</div>" + dato(r.que === "cobro" ? "Nombre" : r.que === "mensaje" ? "Texto" : "Título", c.nombre) + dato(r.que === "agenda" ? "Cuándo" : "Detalle", c.detalle || "") + "</div>";
+        if (r.que === "agenda") h += '<div class="voz-aviso">También desaparece de Google Calendar en unos minutos.</div>';
+        if (r.que === "mensaje") h += '<div class="voz-aviso">' + (c.leido ? "Ojo: el cliente ya lo leyó. Igual se retira del chat." : "Se borra del chat del portal. Si el cliente ya vio el aviso en su celular, al abrir no lo encontrará.") + "</div>";
+        if (r.que === "cobro") h += '<div class="voz-aviso rojo">Un correo enviado no se puede devolver. Lo que sí puedo hacer es enviarle al cliente un correo corto pidiéndole que no tenga en cuenta el cobro anterior.</div>' +
+          (c.tiene_correo === false ? '<div class="voz-aviso rojo">Este cliente no tiene correo válido.</div>' : "");
+      }
+      const si = !c ? "" : r.que === "mensaje" ? "Sí, retirar" : r.que === "cobro" ? (c.tiene_correo === false ? "" : "Sí, enviar el aviso") : "Sí, cancelar";
+      return h + botones("No", si, "cancelar");
+    }
     return "";
   }
 
@@ -209,8 +227,8 @@
     if (est.fase === "como") return cabeza("¿Cómo funciona?", "Órdenes de voz con Doc Dai") + '<div class="voz-como-txt">' +
       "<p><b>1.</b> Toque el micrófono dorado de arriba y diga la orden con calma.</p>" +
       "<p><b>2.</b> Doc Dai entiende lo que pidió y le muestra una tarjeta con los datos. Si hay clientes con nombres parecidos, usted elige a cuál.</p>" +
-      "<p><b>3.</b> <b>Nada se envía</b> hasta que usted toque «Sí, enviar» o «Sí, agendar».</p>" +
-      "<p><b>Órdenes:</b> enviar la cuenta de cobro (si no tiene cuotas vencidas, va el recordatorio de la próxima), enviar un mensaje al portal del cliente, agendar una audiencia o cita, preguntar qué tiene para un día y cuánto debe un cliente.</p>" +
+      "<p><b>3.</b> <b>Nada se envía</b> hasta que usted toque «Sí, enviar» o «Sí, agendar», y aun así tiene 5 segundos para tocar «Deshacer».</p>" +
+      "<p><b>Órdenes:</b> enviar la cuenta de cobro (si no tiene cuotas vencidas, va el recordatorio de la próxima), enviar un mensaje al portal del cliente, agendar tareas, recordatorios, audiencias o citas, preguntar qué tiene para un día y cuánto debe un cliente. <b>Todo se puede cancelar:</b> «cancela la tarea de mañana», «borra el mensaje que le mandé a…» (hasta 24 horas), «anula el cobro de…» (como el correo ya salió, se le envía al cliente un aviso de que no lo tenga en cuenta) o «deshaz lo último».</p>" +
       "<p>El navegador convierte su voz en texto con su dictado (Google en Chrome, Microsoft en Edge), igual que el micrófono de Doc Dai. Después, la orden se entiende en el servidor del despacho, sin inteligencia artificial externa. Es gratis.</p></div>" +
       '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">Cerrar</button><button type="button" class="voz-b1" data-voz="otra">Dar una orden</button></div>';
     if (est.fase === "tarjeta") return tarjeta();
@@ -233,22 +251,39 @@
     const h = $("voz-hora"); if (h) est.hora = h.value;
   }
 
+  // Antes de hacer cualquier orden quedan unos segundos para «Deshacer».
+  let reloj = null;
+  function conDeshacer(fn) {
+    est.espera = 5; pintar();
+    reloj = setInterval(() => {
+      if (!est || !est.espera) { clearInterval(reloj); reloj = null; return; }
+      est.espera--; if (est.espera > 0) { pintar(); return; }
+      clearInterval(reloj); reloj = null; fn();
+    }, 1000);
+  }
+  function deshacer() { if (reloj) { clearInterval(reloj); reloj = null; } if (est) { est.espera = 0; pintar(); hablar("Listo, no hice nada."); } }
+
   async function confirmar(accion) {
     guardarCampos();
     const c = elegido();
     if (accion !== "agendar" && !c) return;
-    const cuerpo = { paso: "ejecutar", accion: accion === "enviar" ? est.r.accion : "agendar", cliente_id: c ? c.id : null };
+    let cuerpo = { paso: "ejecutar", accion: accion === "enviar" ? est.r.accion : "agendar", cliente_id: c ? c.id : null };
+    if (accion === "cancelar") cuerpo = { paso: "ejecutar", accion: "cancelar_" + est.r.que, id: c.id, cliente_id: est.r.que === "cobro" ? c.id : null };
     if (cuerpo.accion === "mensaje") { if (!est.mensaje.trim()) { const t = $("voz-txt"); if (t) t.focus(); return; } cuerpo.texto = est.mensaje.trim(); }
     if (cuerpo.accion === "agendar") {
       if (!est.fecha) { const f = $("voz-fecha"); if (f) f.focus(); return; }
       const exp = c && c.expedientes && c.expedientes[0];
       Object.assign(cuerpo, { titulo: est.titulo || "", fecha: est.fecha, hora: est.hora || "", descripcion: [exp ? "Expediente: Rad. " + exp.numero : "", est.r.dicho ? "Orden dictada: «" + est.r.dicho + "»" : ""].filter(Boolean).join("\n") });
     }
+    conDeshacer(() => hacer(cuerpo));
+  }
+  async function hacer(cuerpo) {
+    if (!est) return;
     est.enviando = true; pintar();
     try {
       const r = await llamar(cuerpo);
       est = { fase: "listo", texto: r.mensaje }; pintar(); hablar(r.mensaje);
-      if (cuerpo.accion === "agendar" || cuerpo.accion === "mensaje") { document.dispatchEvent(new CustomEvent("dc-voz-cambio")); try { window.DC_VOZ_CAMBIO && window.DC_VOZ_CAMBIO(); } catch (e) {} }
+      if (cuerpo.accion === "agendar" || cuerpo.accion === "mensaje" || /^cancelar_(agenda|mensaje)$/.test(cuerpo.accion)) { document.dispatchEvent(new CustomEvent("dc-voz-cambio")); try { window.DC_VOZ_CAMBIO && window.DC_VOZ_CAMBIO(); } catch (e) {} }
     } catch (e) { est.enviando = false; est.errorEnvio = e.message; pintar(); alertaError(e.message); }
   }
   function alertaError(m) {
@@ -262,11 +297,13 @@
     if (b.dataset.vozCli) { guardarCampos(); est.elegido = Number(b.dataset.vozCli); pintar(); if (est.r.accion === "mensaje" && !est.mensaje && elegido() && elegido().portal) dictarMensaje(); return; }
     const a = b.dataset.voz;
     if (a === "abrir" || a === "otra") abrir();
-    else if (a === "cerrar" || (a === "fuera" && est && est.fase !== "tarjeta")) cerrar();
+    else if (a === "cerrar" || (a === "fuera" && est && est.fase !== "tarjeta")) { if (reloj) { clearInterval(reloj); reloj = null; } cerrar(); }
     else if (a === "como") { detener(); est = { fase: "como" }; pintar(); }
     else if (a === "dictar") { guardarCampos(); dictarMensaje(); }
     else if (a === "enviar") confirmar("enviar");
     else if (a === "agendar") confirmar("agendar");
+    else if (a === "cancelar") confirmar("cancelar");
+    else if (a === "deshacer") deshacer();
     else if (a === "agenda") { cerrar(); const n = document.querySelector('.nav [data-vista="agenda"]'); if (n) n.click(); }
   });
 
