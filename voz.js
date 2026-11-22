@@ -76,14 +76,14 @@
   // ---------- Servidor ----------
   // En la web liviana la sesión es la de DC_SB; en la app completa la pasa la app al abrir (opciones).
   let opciones = null;
-  async function llamar(cuerpo) {
+  async function llamar(cuerpo, funcion) {
     let token = opciones && opciones.token;
     if (!token && window.DC_SB) { const { data } = await window.DC_SB.auth.getSession(); token = data && data.session && data.session.access_token; }
     if (!token) throw new Error("Su sesión se cerró. Vuelva a entrar.");
     const url = (opciones && opciones.url) || cfg.url, clave = (opciones && opciones.clave) || cfg.clavePublica;
     const h = { Authorization: "Bearer " + token, apikey: clave, "Content-Type": "application/json" };
     if (opciones && opciones.version) h["x-dc-version"] = opciones.version;
-    const r = await fetch(url + "/functions/v1/ordenes-voz", { method: "POST", headers: h, body: JSON.stringify(cuerpo) });
+    const r = await fetch(url + "/functions/v1/" + (funcion || "ordenes-voz"), { method: "POST", headers: h, body: JSON.stringify(cuerpo) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j.error) throw new Error(j.error || "No se pudo conectar con el servidor.");
     return j;
@@ -112,7 +112,13 @@
     escuchar(async texto => {
       est = { fase: "pensando", dicho: texto }; pintar();
       try {
-        const r = await llamar({ paso: "entender", texto });
+        // 22/11/2026: primero se mira si es conversación (doc-dai-charla); si es una orden, sigue igual que antes.
+        let r = null, t = texto;
+        try { const c = await llamar({ paso: "charla", texto }, "doc-dai-charla"); if (c.accion === "charla") r = c; else if (c.texto) t = c.texto; } catch (e) {}
+        if (!r) {
+          r = await llamar({ paso: "entender", texto: t });
+          if (r.accion === "desconocida") { try { const l = await llamar({ paso: "libre", texto }, "doc-dai-charla"); if (l.accion === "charla") r = l; } catch (e) {} }
+        }
         est = { fase: "tarjeta", r, elegido: r.candidatos && r.candidatos.length === 1 ? r.candidatos[0].id : null, mensaje: r.mensaje || "", fecha: r.fecha || "", hora: r.hora || "", titulo: "" };
         pintar();
         if (r.accion === "mensaje" && est.elegido && !est.mensaje && est.elegido && elegido().portal) { if (r.voz) await hablar(r.voz); if (est && est.r === r) dictarMensaje(); }
@@ -204,6 +210,13 @@
   function tarjeta() {
     const r = est.r, c = elegido(), lista = r.candidatos || [];
     if (r.accion === "desconocida") return cabeza("No entendí la orden", "Entendí: «" + r.dicho + "»") + ayudaHtml() + '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">Cerrar</button><button type="button" class="voz-b1" data-voz="otra">Otra vez</button></div>';
+    // 22/11/2026: conversación con Doc Dai (saludos, la semana, cómo va el despacho, ideas y charla libre).
+    if (r.accion === "charla") {
+      return cabeza(r.titulo || "Doc Dai", r.dicho ? "Usted dijo: «" + r.dicho + "»" : "") +
+        '<div class="voz-burbuja">' + esc(r.texto || "") + "</div>" +
+        ((r.puntos || []).length ? '<div class="voz-tarj voz-puntos">' + r.puntos.map(x => "<div>" + esc(x) + "</div>").join("") + "</div>" : "") +
+        '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">Cerrar</button><button type="button" class="voz-b1 voz-hablar" data-voz="otra">' + MIC + " Responderle</button></div>";
+    }
     if (r.accion === "agenda_dia") {
       return cabeza(String(r.titulo || "").replace(/ de \d{4}$/, ""), "Doc Dai también se lo lee en voz alta") + '<div class="voz-tarj">' + (r.eventos.length ? r.eventos.map(e =>
         '<div class="voz-ev"><span class="voz-hora">' + esc(e.hora) + '</span><span class="crece">' + esc(e.titulo) + (e.detalle ? "<small>" + esc(e.detalle) + "</small>" : "") + "</span></div>").join("") : '<div class="voz-vacio">No hay nada en la agenda para ese día.</div>') + "</div>" +
@@ -289,8 +302,9 @@
       "<p><b>1.</b> Toque el botón dorado de Doc Dai y diga la orden con calma.</p>" +
       "<p><b>2.</b> Doc Dai entiende lo que pidió y le muestra una tarjeta con los datos. Si hay clientes con nombres parecidos, usted elige a cuál.</p>" +
       "<p><b>3.</b> Doc Dai le pregunta en voz alta si lo hace. Puede contestar <b>«sí»</b> o <b>«no»</b> con la voz, o tocar el botón: es lo mismo. <b>Nada se envía</b> sin su sí, y aun así tiene 5 segundos para tocar «Deshacer».</p>" +
+      "<p><b>Conversar:</b> también puede saludarla, preguntarle qué día es, qué tiene esta semana, cómo va el despacho o qué puede hacer hoy para mejorar. Eso lo responde con los datos del despacho, sin inteligencia artificial. Si le pregunta otra cosa, conversa con usted usando la inteligencia de Doc Dai, sin enviar nombres de clientes.</p>" +
       "<p><b>Órdenes:</b> enviar la cuenta de cobro (si no tiene cuotas vencidas, va el recordatorio de la próxima), enviar un mensaje al portal del cliente, agendar tareas, recordatorios, audiencias o citas, preguntar qué tiene para un día y cuánto debe un cliente. <b>Todo se puede cancelar:</b> «cancela la tarea de mañana», «borra el mensaje que le mandé a…» (hasta 24 horas), «anula el cobro de…» (como el correo ya salió, se le envía al cliente un aviso de que no lo tenga en cuenta) o «deshaz lo último».</p>" +
-      "<p>El navegador convierte su voz en texto con su dictado (Google en Chrome, Microsoft en Edge), igual que el micrófono de Doc Dai. Después, la orden se entiende en el servidor del despacho, sin inteligencia artificial externa. Es gratis.</p></div>" +
+      "<p>El navegador convierte su voz en texto con su dictado (Google en Chrome, Microsoft en Edge), igual que el micrófono de Doc Dai. Las órdenes se entienden en el servidor del despacho con reglas propias. Es gratis.</p></div>" +
       '<div class="voz-bts"><button type="button" class="voz-b2" data-voz="cerrar">Cerrar</button><button type="button" class="voz-b1" data-voz="otra">Dar una orden</button></div>';
     if (est.fase === "tarjeta") return tarjeta();
     return "";

@@ -597,3 +597,10 @@ nav.dock .base .on .nav-txt,nav.dock .base .nav-txt{margin-top:0}
 nav.dock .base button:active .ic-caja,nav.dock .base .on:active .ic-caja{transform:scale(.88)}
 nav.nav.dock.oculto{display:none}
 .dai .orbe>svg{color:#0f2540}
+
+/* 22/11/2026: conversación con Doc Dai */
+.voz-burbuja { position:relative; background:var(--oro); color:var(--texto); border-radius:4px 16px 16px 16px; padding:12px 14px; font-size:15px; line-height:1.5; margin:0 0 12px; }
+.voz-puntos div { padding:7px 0; font-size:13.5px; color:var(--texto); border-bottom:1px dashed var(--linea); }
+.voz-puntos div:last-child { border-bottom:0; }
+.voz-hablar { display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.voz-hablar svg { width:18px; height:18px; }
